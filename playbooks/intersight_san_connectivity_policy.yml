@@ -1,5 +1,5 @@
 ---
-# Example Playbook: cisco.intersight.intersight_lan_connectivity_policy
+# Example Playbook: cisco.intersight.intersight_san_connectivity_policy
 # Runs on localhost since policies are only configured once
 # Author: Surendra Ramarao (@CRSurendra)
 - hosts: localhost
@@ -20,20 +20,18 @@
     # Organization name
     org_name: Cloudera-SZR-Org
   tasks:
-    - name: Configure LAN Connectivity Policy
-      intersight_lan_connectivity_policy:
+    - name: Configure SAN Connectivity Policy
+      intersight_san_connectivity_policy:
         <<: *api_info
         organization: "{{ org_name }}"
-        name: TEST_LCP
-        description: LC Policy for lab use
+        name: TEST_SCP
+        description: SC Policy for lab use
         tags:
           - Key: Site
             Value: RCDN
         target_platform: FIAttached
-        iqn_allocation_type: Pool
-        iqn_pool: TEST_IQN_POOL
-        azure_qos_enabled: true
-        placement_mode: auto
+        wwnn_address_type: POOL
+        wwnn_pool: TEST_WWNN_POOL
 
 
         
