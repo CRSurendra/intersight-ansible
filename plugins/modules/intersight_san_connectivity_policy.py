@@ -12,11 +12,11 @@ ANSIBLE_METADATA = {'metadata_version': '1.1',
 
 DOCUMENTATION = r'''
 ---
-module: intersight_lan_connectivity_policy
-short_description: LAN Connectivity policy configuration for Cisco Intersight
+module: intersight_san_connectivity_policy
+short_description: SAN Connectivity policy configuration for Cisco Intersight
 description:
-  - LAN connectivity policy configuration for Cisco Intersight.
-  - Used to configure LAN Connectivity Policy on Cisco Intersight managed devices.
+  - SAN connectivity policy configuration for Cisco Intersight.
+  - Used to configure SAN Connectivity Policy on Cisco Intersight managed devices.
   - For more information see L(Cisco Intersight,https://intersight.com/apidocs).
 extends_documentation_fragment: intersight
 options:
@@ -50,26 +50,6 @@ options:
       - Description can contain letters(a-z, A-Z), numbers(0-9), hyphen(-), period(.), colon(:), or an underscore(_).
     aliases: [descr]
     type: str
-  azure_qos_enabled:
-    description:
-      -  Enabling AzureStack-Host QoS on an adapter allows the user to carve out traffic classes for RDMA traffic which
-      -  ensures that a desired portion of the bandwidth is allocated to it.
-    default: False
-    type: bool
-  iqn_allocation_type:
-    description:
-      -  Allocation Type of iSCSI Qualified Name - Static/Pool/None.
-      -  None - Type indicates that there is no IQN associated to an interface.
-      -  Static - Type represents that static IQN is associated to an interface.
-      -  Pool - Type indicates that IQN value is sourced from an associated pool.
-    choices: ['None' , 'Static' , 'Pool']
-    default: None
-    type: str
-  static_iqn_name:
-    description:
-      -  User provided static iSCSI Qualified Name (IQN) for use as initiator identifiers by iSCSI vNICs in a Fabric Interconnect domain.
-    type: str
-    default: ''
   placement_mode:
     description:
       -  The mode used for placement of vNICs on network adapters. It can either be Auto or Custom.
@@ -78,6 +58,13 @@ options:
     choices: ['custom' , 'auto']
     default: custom
     type: str
+  static_wwnn_address:
+    description:
+      - The WWNN address for the server node must be in hexadecimal format xx:xx:xx:xx:xx:xx:xx:xx.
+      - Allowed ranges are '20:00:00:00:00:00:00:00' to '20:FF:FF:FF:FF:FF:FF:FF' or from '50:00:00:00:00:00:00:00' to '5F:FF:FF:FF:FF:FF:FF:FF'.
+      - To ensure uniqueness of WWN's in the SAN fabric, you are strongly encouraged to use the WWN prefix - '20:00:00:25:B5:xx:xx:xx'.
+    type: str
+    default: ''
   target_platform:
     description:
       -  The platform for which the server profile is applicable. It can either be a server that is operating in standalone mode or
@@ -87,34 +74,43 @@ options:
     choices: ['Standalone' , 'FIAttached']
     default: Standalone
     type: str
-  iqn_pool:
+  wwnn_address_type:
     description:
-      -  A reference to a iqnpoolPool resource.
+      -  Type of allocation selected to assign a WWNN address for the server node.
+      - POOL - The user selects a pool from which the mac/wwn address will be leased for the Virtual Interface.
+      - STATIC - The user assigns a static mac/wwn address for the Virtual Interface.
+    choices: ['POOL' , 'STATIC']
+    default: POOL
+    type: str
+  wwnn_pool:
+    description:
+      - A reference to a fcpoolPool resource
     type: str
     default: ''
+
 author:
   - Surendra Ramarao (@CRSurendra)
 '''
 
 EXAMPLES = r'''
-- name: Configure LAN Connectivity Policy
-  cisco.intersight.intersight_lan_connectivity_policy:
+- name: Configure SAN Connectivity Policy
+  cisco.intersight.intersight_san_connectivity_policy:
     api_private_key: "{{ api_private_key }}"
     api_key_id: "{{ api_key_id }}"
     organization: DevNet
-    name: COS-LCP
-    description: LAN connectivity policy for COS
+    name: COS-SCP
+    description: SAN connectivity policy for COS
     tags:
       - Key: Site
         Value: RCDN
     target: FIAttached
 
-- name: Delete LAN Connectivity Policy
-  cisco.intersight.intersight_lan_connectivity_policy:
+- name: Delete SAN Connectivity Policy
+  cisco.intersight.intersight_san_connectivity_policy:
     api_private_key: "{{ api_private_key }}"
     api_key_id: "{{ api_key_id }}"
     organization: DevNet
-    name: COS-LCP
+    name: COS-SCP
     state: absent
 '''
 
@@ -125,8 +121,8 @@ api_repsonse:
   type: dict
   sample:
     "api_response": {
-        "Name": "COS-LCP",
-        "ObjectType": "vnic.LanConnectivityPolicy",
+        "Name": "COS-SCP",
+        "ObjectType": "vnic.SanConnectivityPolicy",
         "Tags": [
             {
                 "Key": "Site",
@@ -174,19 +170,6 @@ def main():
         name=dict(type='str', required=True),
         description=dict(type='str', aliases=['descr']),
         tags=dict(type='list', elements='dict'),
-        azure_qos_enabled=dict(
-            type='bool',
-            default=False
-        ),
-        iqn_allocation_type=dict(
-            type='str',
-            choices=[
-                 'None',
-                 'Static',
-                 'Pool'
-            ],
-            default='None'
-        ),
         placement_mode=dict(
             type='str',
             choices=[
@@ -195,7 +178,7 @@ def main():
             ],
             default='custom'
         ),
-        static_iqn_name=dict(
+        static_wwnn_address=dict(
             type='str',
             default=''
         ),
@@ -207,7 +190,15 @@ def main():
             ],
             default='Standalone'
         ),
-        iqn_pool=dict(
+        wwnn_address_type=dict(
+            type='str',
+            choices=[
+                 'POOL',
+                 'STATIC'
+            ],
+            default='POOL'
+        ),
+        wwnn_pool=dict(
             type='str',
             default=''
         ),
@@ -222,13 +213,12 @@ def main():
     intersight.result['api_response'] = {}
     intersight.result['trace_id'] = ''
 
-    iqn_pool = get_policy_ref(intersight, intersight.module.params['iqn_pool'], '/iqnpool/Pools')
-
+    wwnn_pool = get_policy_ref(intersight, intersight.module.params['wwnn_pool'], '/fcpool/Pools')
     #
     # Argument spec above, resource path, and API body should be the only code changed in each policy module
     #
     # Resource path used to configure policy
-    resource_path = '/vnic/LanConnectivityPolicies'
+    resource_path = '/vnic/SanConnectivityPolicies'
     # Define API body used in compares or create
     intersight.api_body = {
         'Organization': {
@@ -238,12 +228,11 @@ def main():
         'Tags': intersight.module.params['tags'],
         'Description': intersight.module.params['description'],
     }
-    check_and_add_prop('AzureQosEnabled', 'azure_qos_enabled', intersight.module.params, intersight.api_body)
-    check_and_add_prop('IqnAllocationType', 'iqn_allocation_type', intersight.module.params, intersight.api_body)
-    check_and_add_prop('PlacementMode', 'placement_mode', intersight.module.params, intersight.api_body)
-    check_and_add_prop('StaticIqnName', 'static_iqn_name', intersight.module.params, intersight.api_body)
     check_and_add_prop('TargetPlatform', 'target_platform', intersight.module.params, intersight.api_body)
-    check_and_add_prop_policy('IqnPool', 'iqn_pool', iqn_pool, intersight.api_body)
+    check_and_add_prop('StaticWwnnAddress', 'static_wwnn_address', intersight.module.params, intersight.api_body)
+    check_and_add_prop('PlacementMode', 'placement_mode', intersight.module.params, intersight.api_body)
+    check_and_add_prop('WwnnAddressType', 'wwnn_address_type', intersight.module.params, intersight.api_body)
+    check_and_add_prop_policy('WwnnPool', 'wwnn_pool', wwnn_pool, intersight.api_body)
     #
     # Code below should be common across all policy modules
     #

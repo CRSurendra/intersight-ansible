@@ -27,12 +27,6 @@ options:
     choices: [present, absent]
     default: present
     type: str
-  organization:
-    description:
-      - The name of the Organization this resource is assigned to.
-      - Profiles and Policies that are created within a Custom Organization are applicable only to devices in the same Organization.
-    default: default
-    type: str
   name:
     description:
       - The name assigned to the virtual ethernent interface.
@@ -44,12 +38,6 @@ options:
       - List of tags in Key:<user-defined key> Value:<user-defined value> format.
     type: list
     elements : dict
-  description:
-    description:
-      - The user-defined description of the Boot Order policy.
-      - Description can contain letters(a-z, A-Z), numbers(0-9), hyphen(-), period(.), colon(:), or an underscore(_).
-    aliases: [descr]
-    type: str
   cdn:
     description:
       -  Consistent Device Naming configuration for the virtual NIC.
@@ -68,9 +56,12 @@ options:
         description:
           - The CDN value entered in case of user defined mode.
         type: str
+        default: ''
   failover_enabled:
     description:
-      -  Enabling failover ensures that traffic from the vNIC automatically fails over to the secondary Fabric Interconnect, in case the specified Fabric Interconnect path goes down. Failover applies only to Cisco VICs that are connected to a Fabric Interconnect cluster.
+      - Enabling failover ensures that traffic from the vNIC automatically fails over to the secondary
+      - Fabric Interconnect, in case the specified Fabric Interconnect path goes down. Failover applies
+      - only to Cisco VICs that are connected to a Fabric Interconnect cluster.
     default: False
     type: bool
   mac_address_type:
@@ -83,12 +74,19 @@ options:
     type: str
   order:
     description:
-      -  The order in which the virtual interface is brought up. The order assigned to an interface should be unique for all the Ethernet and Fibre-Channel interfaces on each PCI link on a VIC adapter. The order should start from zero with no overlaps. The maximum value of PCI order is limited by the number of virtual interfaces (Ethernet and Fibre-Channel) on each PCI link on a VIC adapter. All VIC adapters have a single PCI link except VIC 1340, VIC 1380 and VIC 1385 which have two.
+      - The order in which the virtual interface is brought up. The order assigned to an interface should
+      - be unique for all the Ethernet and Fibre-Channel interfaces on each PCI link on a VIC adapter.
+      - The order should start from zero with no overlaps. The maximum value of PCI order is limited by the number
+      - of virtual interfaces (Ethernet and Fibre-Channel) on each PCI link on a VIC adapter.
+      - All VIC adapters have a single PCI link except VIC 1340, VIC 1380 and VIC 1385 which have two.
     type: int
+    default: 0
   pin_group_name:
     description:
-      -  Pingroup name associated to vNIC for static pinning. LCP deploy will resolve pingroup name and fetches the correspoding uplink port/port channel to pin the vNIC traffic.
+      - Pingroup name associated to vNIC for static pinning. LCP deploy will resolve pingroup name and fetches
+      - the correspoding uplink port/port channel to pin the vNIC traffic.
     type: str
+    default: ''
   placement:
     description:
       -  placement Settings for the virtual interface.
@@ -112,9 +110,10 @@ options:
         description:
           - PCIe Slot where the VIC adapter is installed. Supported values are (1-15) and MLOM.
         type: str
+        default: ''
       pci_link:
         description:
-          - The PCI Link used as transport for the virtual interface. PCI Link is only applicable for select 
+          - The PCI Link used as transport for the virtual interface. PCI Link is only applicable for select
           - Cisco UCS VIC 1300 models (UCSC-PCIE-C40Q-03, UCSB-MLOM-40G-03, UCSB-VIC-M83-8P) that support two PCI links.
           - The value, if specified, for any other VIC model will be ignored.
         type: int
@@ -127,7 +126,7 @@ options:
           - Load-Balanced - The system will uniformly distribute the interfaces across the PCI Links.
           - None - Assignment is not applicable and will be set when the AutoPciLink is set to true.
         type: str
-        chocies: ['Custom', 'Load-Balanced', 'None']
+        choices: ['Custom', 'Load-Balanced', 'None']
         default: Custom
       switch_id:
         description:
@@ -142,12 +141,14 @@ options:
         description:
           - Adapter port on which the virtual interface will be created.
         type: int
+        default: 0
   static_mac_address:
     description:
       - 'The MAC address must be in hexadecimal format xx:xx:xx:xx:xx:xx.'
       - To ensure uniqueness of MACs in the LAN fabric, you are strongly encouraged to use the
       - 'following MAC prefix 00:25:B5:xx:xx:xx.'
     type: str
+    default: ''
   eth_adapter_policy:
     description:
       -  A reference to a vniceth_adapter_policy resource.
@@ -172,6 +173,7 @@ options:
     description:
       -  An array of relationships to fabricEthNetworkGroupPolicy resources.
     type: list
+    elements: str
   lan_connectivity_policy:
     description:
       -  A reference to a vniclan_connectivity_policy resource.
@@ -182,7 +184,7 @@ options:
       -  A reference to a macpoolPool resource.
       - When the $expand query parameter is specified, the referenced resource is returned inline.
     type: str
-  
+
 author:
   - Surendra Ramarao (@CRSurendra)
 '''
@@ -248,19 +250,21 @@ def check_and_add_prop_dict(prop, prop_key, params, api_body):
 def check_and_add_prop_policy(prop, prop_key, params, api_body):
     api_body[prop] = {}
     for key in params.keys():
-      api_body[prop][key] = params[key]
+        api_body[prop][key] = params[key]
+
 
 def to_camel_case(snake_str):
     return "".join(x.capitalize() for x in snake_str.lower().split("_"))
+
 
 def get_policy_ref(intersight, policy_name, resource_path):
     intersight.result['api_response'] = {}
     intersight.result['trace_id'] = ''
     moid = None
     query = str.format("Name eq '{policy}'", policy=policy_name)
-    intersight.get_resource(resource_path= resource_path, query_params={"$filter": query})
+    intersight.get_resource(resource_path=resource_path, query_params={"$filter": query})
     if intersight.result['api_response'].get('Moid'):
-       # resource exists and moid was returned
+        # resource exists and moid was returned
         moid = intersight.result['api_response']['Moid']
     intersight.result['api_response'] = {}
     intersight.result['trace_id'] = ''
@@ -275,7 +279,7 @@ def main():
     placement_settings_spec = {
         "auto_pci_link" : {"type": "bool", "default": "False"},
         "auto_slot_id" : {"type": "bool", "default": "False"},
-        "id" : {"type": "str", "default":''},
+        "id" : {"type": "str", "default": ''},
         "pci_link" : {"type": "int", "default": 0},
         "pci_link_assignment_mode" : {"type": "str", "choices": ['Custom', 'Load-Balanced', 'None'], "default": 'Custom'},
         "switch_id" : {"type": "str", "choices": ['None', 'A', 'B'], "default": 'None'},
@@ -297,18 +301,21 @@ def main():
         },
         mac_address_type={
             "type": "str",
-            "choices": ['POOL','STATIC'],
+            "choices": ['POOL', 'STATIC'],
             "default": "POOL"
         },
         order={
             "type": "int",
             "default": 0
         },
+        pin_group_name={
+            "type": "str",
+            "default": ''
+        },
         placement={
             "type": "list",
             "elements": "dict",
             "options": placement_settings_spec
-            
         },
         static_mac_address={
             "type": "str",
@@ -331,7 +338,7 @@ def main():
             "elements": "str"
         },
         lan_connectivity_policy={
-            "type": "str",            
+            "type": "str",
         },
         mac_pool={
             "type" : "str",
@@ -346,7 +353,7 @@ def main():
     intersight = IntersightModule(module)
     intersight.result['api_response'] = {}
     intersight.result['trace_id'] = ''
-    
+
     eth_adapter_policy = get_policy_ref(intersight, intersight.module.params['eth_adapter_policy'], '/vnic/EthAdapterPolicies')
     eth_network_policy = get_policy_ref(intersight, intersight.module.params['eth_network_policy'], '/vnic/EthNetworkPolicies')
     eth_qos_policy = get_policy_ref(intersight, intersight.module.params['eth_qos_policy'], '/vnic/EthQosPolicies')
@@ -367,6 +374,7 @@ def main():
     check_and_add_prop('FailoverEnabled', 'failover_enabled', intersight.module.params, intersight.api_body)
     check_and_add_prop('MacAddressType', 'mac_address_type', intersight.module.params, intersight.api_body)
     check_and_add_prop('Order', 'order', intersight.module.params, intersight.api_body)
+    check_and_add_prop('PinGroupName', 'pin_group_name', intersight.module.params, intersight.api_body)
     check_and_add_prop_dict('Placement', 'placement', intersight.module.params, intersight.api_body)
     check_and_add_prop('StaticMacAddress', 'static_mac_address', intersight.module.params, intersight.api_body)
     check_and_add_prop_policy('EthAdapterPolicy', 'eth_adapter_policy', eth_adapter_policy, intersight.api_body)
@@ -382,22 +390,22 @@ def main():
     filter_str += "and Parent.Moid eq '" + lan_connectivity_policy['Moid'] + "'"
 
     intersight.get_resource(
-            resource_path=resource_path,
-            query_params={
-                '$filter': filter_str,
-            }
-        )
+        resource_path=resource_path,
+        query_params={
+            '$filter': filter_str,
+        }
+    )
     vnic_moid = None
     resource_values_match = False
     if intersight.result['api_response'].get('Moid'):
-      # resource exists and moid was returned
-      vnic_moid = intersight.result['api_response']['Moid']
-      resource_values_match = compare_values(intersight.api_body, intersight.result['api_response'])
+        # resource exists and moid was returned
+        vnic_moid = intersight.result['api_response']['Moid']
+        resource_values_match = compare_values(intersight.api_body, intersight.result['api_response'])
     intersight.result['api_response'] = {}
     intersight.result['trace_id'] = ''
     if not resource_values_match:
-      intersight.configure_resource(moid=vnic_moid, resource_path=resource_path, body=intersight.api_body, query_params=None)
-    
+        intersight.configure_resource(moid=vnic_moid, resource_path=resource_path, body=intersight.api_body, query_params=None)
+
     module.exit_json(**intersight.result)
 
 
