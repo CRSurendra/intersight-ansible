@@ -152,22 +152,18 @@ options:
   eth_adapter_policy:
     description:
       -  A reference to a vniceth_adapter_policy resource.
-      - When the $expand query parameter is specified, the referenced resource is returned inline.
     type: str
   eth_network_policy:
     description:
       -  A reference to a vniceth_network_policy resource.
-      - When the $expand query parameter is specified, the referenced resource is returned inline.
     type: str
   eth_qos_policy:
     description:
       -  A reference to a vniceth_qos_policy resource.
-      - When the $expand query parameter is specified, the referenced resource is returned inline.
     type: str
   fabric_eth_network_control_policy:
     description:
       -  A reference to a fabricEthNetworkControlPolicy resource.
-      - When the $expand query parameter is specified, the referenced resource is returned inline.
     type: str
   fabric_eth_network_group_policy:
     description:
@@ -177,12 +173,11 @@ options:
   lan_connectivity_policy:
     description:
       -  A reference to a vniclan_connectivity_policy resource.
-      - When the $expand query parameter is specified, the referenced resource is returned inline.
     type: str
+    required : True
   mac_pool:
     description:
       -  A reference to a macpoolPool resource.
-      - When the $expand query parameter is specified, the referenced resource is returned inline.
     type: str
 
 author:
@@ -191,22 +186,34 @@ author:
 
 EXAMPLES = r'''
 - name: Configure Virtual Ethernet Interface
-  cisco.intersight.intersight_ethernet_network_group_policy:
+  cisco.intersight.intersight_virtual_ethernent_interface:
     api_private_key: "{{ api_private_key }}"
     api_key_id: "{{ api_key_id }}"
-    organization: DevNet
-    name: COS-ENGP
-    description: Fabric Ethernet Network Group Policy for COS
+    name: eth0
     tags:
       - Key: Site
         Value: RCDN
+    cdn:
+      - source: vnic
+    failover_enabled: false
+    mac_address_type: POOL
+    mac_pool: TEST_MAC_POOL
+    placement:
+      - auto_pci_link: false
+        auto_slot_id: false
+        switch_id: A
+    eth_adapter_policy: TEST_EAP
+    eth_network_policy: TEST_ENP
+    eth_qos_policy: TEST_QOS
+    lan_connectivity_policy: TEST_LCP
+  
 
-- name: Delete Fabric Ethernet Network Group Policy
-  cisco.intersight.intersight_ethernet_network_group_policy:
+- name: Delete Virtual Ethernet Interface 
+  cisco.intersight.intersight_virtual_ethernent_interface:
     api_private_key: "{{ api_private_key }}"
     api_key_id: "{{ api_key_id }}"
-    organization: DevNet
-    name: COS-ENGP
+    name: eth0
+    lan_connectivity_policy: TEST_LCP
     state: absent
 '''
 
@@ -217,8 +224,8 @@ api_repsonse:
   type: dict
   sample:
     "api_response": {
-        "Name": "COS-ENWP",
-        "ObjectType": "fabric.EthNetworkGroupPolicy",
+        "Name": "eth0",
+        "ObjectType": "vnic.EthIf",
         "Tags": [
             {
                 "Key": "Site",
@@ -339,6 +346,7 @@ def main():
         },
         lan_connectivity_policy={
             "type": "str",
+            "required": True
         },
         mac_pool={
             "type" : "str",
@@ -400,11 +408,15 @@ def main():
     if intersight.result['api_response'].get('Moid'):
         # resource exists and moid was returned
         vnic_moid = intersight.result['api_response']['Moid']
-        resource_values_match = compare_values(intersight.api_body, intersight.result['api_response'])
+        if intersight.module.params['state'] == 'present':
+            resource_values_match = compare_values(intersight.api_body, intersight.result['api_response'])
     intersight.result['api_response'] = {}
     intersight.result['trace_id'] = ''
-    if not resource_values_match:
+    if intersight.module.params['state'] == 'present' and not resource_values_match:
         intersight.configure_resource(moid=vnic_moid, resource_path=resource_path, body=intersight.api_body, query_params=None)
+    elif intersight.module.params['state'] == 'absent':
+        intersight.delete_resource(moid=vnic_moid, resource_path=resource_path)
+        vnic_moid = None
 
     module.exit_json(**intersight.result)
 
