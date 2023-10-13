@@ -62,6 +62,9 @@ options:
       - Managed Obect ID (MOID) of assigned server.
       - Option can be omitted if user wishes to assign server later.
     type: str
+  adapter_config_policy:
+    description:
+      - Name of the Adapter Configuration Policy to be associated with this profile
   boot_order_policy:
     description:
       - Name of Boot Order Policy to associate with this profile.
@@ -109,6 +112,7 @@ EXAMPLES = r'''
         Value: SJC02
     description: Profile for Server1
     assigned_server: 5e3b517d6176752d319a9999
+    adapter_config_policy : COS-adapter-config
     boot_order_policy: COS-Boot
     imc_access_policy: sjc02-d23-access
     lan_connectivity_policy: sjc02-d23-lan
@@ -216,6 +220,7 @@ def main():
         tags=dict(type='list', elements='dict'),
         description=dict(type='str', aliases=['descr']),
         assigned_server=dict(type='str'),
+        adapter_config_policy=dict(type='str'),
         boot_order_policy=dict(type='str'),
         imc_access_policy=dict(type='str'),
         lan_connectivity_policy=dict(type='str'),
@@ -267,6 +272,9 @@ def main():
 
     # Configure the profile
     moid = intersight.configure_policy_or_profile(resource_path=resource_path)
+
+    if moid and intersight.module.params['adapter_config_policy']:
+        post_profile_to_policy(intersight, moid, resource_path='/adapter/ConfigPolicies', policy_name=intersight.module.params['adapter_config_policy'])
 
     if moid and intersight.module.params['boot_order_policy']:
         post_profile_to_policy(intersight, moid, resource_path='/boot/PrecisionPolicies', policy_name=intersight.module.params['boot_order_policy'])
