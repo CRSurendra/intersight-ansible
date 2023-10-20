@@ -65,18 +65,6 @@ options:
       -  The maximum size of the Fibre Channel frame payload bytes that the virtual interface supports.
     default: 2112
     type: int
-  priority:
-    description:
-      -  The priortity matching the System QoS specified in the fabric profile.
-      -  Best Effort - QoS priority for Best-effort traffic.
-      -  FC - QoS priority for FC traffic.
-      -  Platinum - QoS priority for Platinum traffic.
-      -  Gold - QoS priority for Gold traffic.
-      -  Silver - QoS priority for Silver traffic.
-      -  Bronze - QoS priority for Bronze traffic.
-    choices: ['Best Effort' , 'FC' , 'Platinum' , 'Gold' , 'Silver' , 'Bronze']
-    default: Best Effort
-    type: str
   rate_limit:
     description:
       -  The value in Mbps to use for limiting the data rate on the virtual interface.
@@ -97,7 +85,7 @@ EXAMPLES = r'''
     tags:
       - Key: Site
         Value: RCDN
-    priority: Platinum
+    cos: 1
 
 - name: Delete Fibre Channel Qos Policy
   cisco.intersight.intersight_fibre_channel_qos_policy:
@@ -156,18 +144,6 @@ def main():
             "type": "int",
             "default": 2112
         },
-        priority={
-            "type": "str",
-            "choices": [
-                'Best Effort',
-                'FC',
-                'Platinum',
-                'Gold',
-                'Silver',
-                'Bronze'
-            ],
-            "default": "Best Effort"
-        },
         rate_limit={
             "type": "int",
             "default": 0
@@ -199,7 +175,6 @@ def main():
     check_and_add_prop('Burst', 'burst', intersight.module.params, intersight.api_body)
     check_and_add_prop('Cos', 'cos', intersight.module.params, intersight.api_body)
     check_and_add_prop('MaxDataFieldSize', 'max_data_field_size', intersight.module.params, intersight.api_body)
-    check_and_add_prop('Priority', 'priority', intersight.module.params, intersight.api_body)
     check_and_add_prop('RateLimit', 'rate_limit', intersight.module.params, intersight.api_body)
     #
     # Code below should be common across all policy modules

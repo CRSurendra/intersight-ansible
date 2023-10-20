@@ -1,0 +1,67 @@
+---
+# Example Playbook: cisco.intersight.intersight_fibre_channel_adapter_policy
+# Runs on localhost since policies are only configured once
+# Author: Surendra Ramarao (@CRSurendra)
+- hosts: localhost
+  connection: local
+  collections:
+    - cisco.intersight
+  gather_facts: false
+  vars:
+    # Create an anchor for api_info that can be used throughout the file
+    api_info: &api_info
+      # if api_key vars are omitted, INTERSIGHT_API_KEY_ID, INTERSIGHT_API_PRIVATE_KEY,
+      # and INTERSIGHT_API_URI environment variables used for API key data
+      api_private_key: "{{ api_private_key | default(omit) }}"
+      api_key_id: "{{ api_key_id | default(omit) }}"
+      api_uri: "{{ api_uri | default(omit) }}"
+      validate_certs: "{{ validate_certs | default(omit) }}"
+      state: "{{ state | default('present') }}"
+    # Organization name
+    org_name: Cloudera-SZR-Org
+  tasks:
+    - name: Configure Fibre Channel Adpater Policy
+      intersight_fibre_channel_adapter_policy:
+        <<: *api_info
+        organization: "{{ org_name }}"
+        name: TEST_FCAP
+        description: FCA Policy for lab use
+        tags:
+          - Key: Site
+            Value: RCDN
+        error_detection_timeout: 2000
+        error_recovery_settings:
+          - enabled: true
+            io_retry_count: 4
+            io_retry_timeout: 5
+            link_down_timeout: 30000
+            port_down_timeout: 30000
+        flogi_settings:
+          - retries: 3
+            timeout: 4000
+        interrupt_settings:
+          - mode: MSIx
+        plogi_settings:
+          - retries: 3
+            timeout: 20000
+        rx_queue_settings:
+          - count: 1
+            ring_size: 64
+        tx_queue_settings:
+          - count: 1
+            ring_size: 64
+        scsi_queue_settings:
+          - count: 1
+            ring_size: 512
+        io_throttle_count: 512
+        lun_count: 1024
+        lun_queue_depth: 20
+        resource_allocation_timeout: 10000
+        
+        
+            
+
+
+        
+
+        

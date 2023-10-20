@@ -276,81 +276,39 @@ def to_camel_case(snake_str):
 
 
 def main():
-    error_recovery_settings_spec={
-      "class_id":{
-            "type": "str",
-            "choices": [
-                'vnic.FcErrorRecoverySettings'
-            ],
-            "default": "vnic.FcErrorRecoverySettings"
-        },
-      "object_type":{
-            "type": "str",
-            "choices": [
-                'vnic.FcErrorRecoverySettings'
-            ],
-            "default": "vnic.FcErrorRecoverySettings"
-        },
-      "enabled":{
+    error_recovery_settings_spec = {
+        "enabled": {
             "type": "bool",
         },
-      "io_retry_count":{
+        "io_retry_count": {
             "type": "int",
             "default": 8
         },
-      "io_retry_timeout":{
+        "io_retry_timeout": {
             "type": "int",
             "default": 5
         },
-      "link_down_timeout":{
+        "link_down_timeout": {
             "type": "int",
             "default": 30000
         },
-      "port_down_timeout":{
+        "port_down_timeout": {
             "type": "int",
             "default": 10000
         },
     }
-    flogi_settings_spec={
-      "class_id":{
-            "type": "str",
-            "choices": [
-                'vnic.FlogiSettings'
-            ],
-            "default": "vnic.FlogiSettings"
-        },
-      "object_type":{
-            "type": "str",
-            "choices": [
-                'vnic.FlogiSettings'
-            ],
-            "default": "vnic.FlogiSettings"
-        },
-      "retries":{
+    flogi_settings_spec = {
+        "retries": {
             "type": "int",
             "default": 8
         },
-      "timeout":{
+        "timeout": {
             "type": "int",
             "default": 4000
         },
     }
-    interrupt_settings_spec={
-      "class_id":{
-            "type": "str",
-            "choices": [
-                'vnic.FcInterruptSettings'
-            ],
-            "default": "vnic.FcInterruptSettings"
-        },
-      "object_type":{
-            "type": "str",
-            "choices": [
-                'vnic.FcInterruptSettings'
-            ],
-            "default": "vnic.FcInterruptSettings"
-        },
-      "mode":{
+    interrupt_settings_spec = {
+        "mode": {
             "type": "str",
             "choices": [
                 'MSIx',
@@ -360,98 +318,42 @@ def main():
             "default": "MSIx"
         },
     }
-    plogi_settings_spec={
-      "class_id":{
-            "type": "str",
-            "choices": [
-                'vnic.PlogiSettings'
-            ],
-            "default": "vnic.PlogiSettings"
-        },
-      "object_type":{
-            "type": "str",
-            "choices": [
-                'vnic.PlogiSettings'
-            ],
-            "default": "vnic.PlogiSettings"
-        },
-      "retries":{
+    plogi_settings_spec = {
+        "retries": {
             "type": "int",
             "default": 8
         },
-      "timeout":{
+        "timeout": {
             "type": "int",
             "default": 20000
         },
     }
-    rx_queue_settings_spec={
-      "class_id":{
-            "type": "str",
-            "choices": [
-                'vnic.FcQueueSettings'
-            ],
-            "default": "vnic.FcQueueSettings"
-        },
-      "object_type":{
-            "type": "str",
-            "choices": [
-                'vnic.FcQueueSettings'
-            ],
-            "default": "vnic.FcQueueSettings"
-        },
-      "count":{
+    rx_queue_settings_spec = {
+        "count": {
             "type": "int",
             "default": 1
         },
-      "ring_size":{
+        "ring_size": {
             "type": "int",
             "default": 64
         },
     }
-    scsi_queue_settings_spec={
-      "class_id":{
-            "type": "str",
-            "choices": [
-                'vnic.ScsiQueueSettings'
-            ],
-            "default": "vnic.ScsiQueueSettings"
-        },
-      "object_type":{
-            "type": "str",
-            "choices": [
-                'vnic.ScsiQueueSettings'
-            ],
-            "default": "vnic.ScsiQueueSettings"
-        },
-      "count":{
+    scsi_queue_settings_spec = {
+        "count": {
             "type": "int",
             "default": 1
         },
-      "ring_size":{
+        "ring_size": {
             "type": "int",
             "default": 512
         },
     }
-    tx_queue_settings_spec={
-      "class_id":{
-            "type": "str",
-            "choices": [
-                'vnic.FcQueueSettings'
-            ],
-            "default": "vnic.FcQueueSettings"
-        },
-      "object_type":{
-            "type": "str",
-            "choices": [
-                'vnic.FcQueueSettings'
-            ],
-            "default": "vnic.FcQueueSettings"
-        },
-      "count":{
+    tx_queue_settings_spec = {
+        "count": {
             "type": "int",
             "default": 1
         },
-      "ring_size":{
+        "ring_size": {
             "type": "int",
             "default": 64
         },
@@ -470,17 +372,17 @@ def main():
         error_recovery_settings={
             "type": "list",
             "options": error_recovery_settings_spec,
-            "elements":"dict",
+            "elements": "dict",
         },
         flogi_settings={
             "type": "list",
             "options": flogi_settings_spec,
-            "elements":"dict",
+            "elements": "dict",
         },
         interrupt_settings={
             "type": "list",
             "options": interrupt_settings_spec,
-            "elements":"dict",
+            "elements": "dict",
         },
         io_throttle_count={
             "type": "int",
@@ -497,7 +399,7 @@ def main():
         plogi_settings={
             "type": "list",
             "options": plogi_settings_spec,
-            "elements":"dict",
+            "elements": "dict",
         },
         resource_allocation_timeout={
             "type": "int",
@@ -506,21 +408,17 @@ def main():
         rx_queue_settings={
             "type": "list",
             "options": rx_queue_settings_spec,
-            "elements":"dict",
+            "elements": "dict",
         },
         scsi_queue_settings={
             "type": "list",
             "options": scsi_queue_settings_spec,
-            "elements":"dict",
+            "elements": "dict",
         },
         tx_queue_settings={
             "type": "list",
             "options": tx_queue_settings_spec,
-            "elements":"dict",
-        },
-        organization={
-            "type": "str",
-            "default": ""
+            "elements": "dict",
         },
     )
 

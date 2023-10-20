@@ -58,8 +58,8 @@ options:
     suboptions:
       default_vlan_id:
         description:
-          -  Default VLAN of the virtual interface in Standalone Rack server. Setting the value to 0 is equivalent to None and will not associate any Default VLAN
-          -  to the traffic on the virtual interface (0-4094).
+          -  Default VLAN of the virtual interface in Standalone Rack server. Setting the value to 0 is equivalent to None and will not associate any Default
+          -  VLAN to the traffic on the virtual interface (0-4094).
         default: 0
         type: int
       id:
@@ -132,12 +132,12 @@ def to_camel_case(snake_str):
 
 
 def main():
-    vsan_settings_spec={
-      "default_vlan_id":{
+    vsan_settings_spec = {
+        "default_vlan_id": {
             "type": "int",
             "default": 0
         },
-      "id":{
+        "id": {
             "type": "int",
             "default": 1
         },
@@ -152,7 +152,7 @@ def main():
         vsan_settings={
             "type": "list",
             "options": vsan_settings_spec,
-            "elements":"dict",
+            "elements": "dict",
         },
     )
 
