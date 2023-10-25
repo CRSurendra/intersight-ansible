@@ -103,8 +103,8 @@ options:
         description:
           - The fabric port to which the vNICs will be associated.
           - None - Fabric Id is not set to either A or B for the standalone case where the server is not connected to Fabric Interconnects.
-          - A - Fabric A of the FI cluster.
-          - B - Fabric B of the FI cluster.
+          - 'A - Fabric A of the FI cluster.'
+          - 'B - Fabric B of the FI cluster.'
         type: str
         choices: ['None', 'A', 'B']
         default: None
@@ -117,8 +117,7 @@ options:
     description:
       - 'The WWPN address must be in hexadecimal format xx:xx:xx:xx:xx:xx:xx:xx.'
       - 'Allowed ranges are 20:00:00:00:00:00:00:00 to 20:FF:FF:FF:FF:FF:FF:FF or from 50:00:00:00:00:00:00:00 to 5F:FF:FF:FF:FF:FF:FF:FF.'
-      - 'To ensure uniqueness of WWN's in the SAN fabric, you are strongly encouraged to use the WWN prefix - 20:00:00:25:B5:xx:xx:xx.'
-    type: str
+      - 'To ensure uniqueness of WWNs in the SAN fabric, you are strongly encouraged to use the WWN prefix - 20:00:00:25:B5:xx:xx:xx.'
     type: str
     default: ''
   type:
@@ -148,24 +147,29 @@ options:
       -  A reference to a vnicfc_adapter_policy resource.
       - When the $expand query parameter is specified, the referenced resource is returned inline.
     type: str
+    default: ''
   fc_network_policy:
     description:
       -  A reference to a vnicfc_network_policy resource.
       - When the $expand query parameter is specified, the referenced resource is returned inline.
     type: str
+    default: ''
   fc_qos_policy:
     description:
       -  A reference to a vnicfc_qos_policy resource.
       - When the $expand query parameter is specified, the referenced resource is returned inline.
     type: str
+    default: ''
   san_connectivity_policy:
     description:
       -  A reference to a vnicsan_connectivity_policy resource.
     type: str
+    default: ''
   wwpn_pool:
     description:
       -  A reference to a fcpoolPool resource.
     type: str
+    default: ''
 
 author:
   - Surendra Ramarao (@CRSurendra)
@@ -189,9 +193,8 @@ EXAMPLES = r'''
     fc_network_policy: TEST_FNP
     fc_qos_policy: TEST_FQOS
     san_connectivity_policy: TEST_SCP
-  
 
-- name: Delete Virtual Fibre Channel Interface 
+- name: Delete Virtual Fibre Channel Interface
   cisco.intersight.intersight_virtual_fibre_channel_interface_policy:
     api_private_key: "{{ api_private_key }}"
     api_key_id: "{{ api_key_id }}"
@@ -277,7 +280,7 @@ def main():
         name={"type": "str", "required": True},
         tags={"type": "list", "elements": "dict"},
         order={"type": "int", "default": 0},
-        persistent_bindings={ "type": "bool", "default": False},
+        persistent_bindings={"type": "bool", "default": False},
         pin_group_name={"type": "str", "default": ""},
         placement={
             "type": "list",
@@ -364,7 +367,7 @@ def main():
     check_and_add_prop_policy('FcNetworkPolicy', 'fc_network_policy', fc_network_policy, intersight.api_body)
     check_and_add_prop_policy('FcQosPolicy', 'fc_qos_policy', fc_qos_policy, intersight.api_body)
     check_and_add_prop_policy('SanConnectivityPolicy', 'san_connectivity_policy', san_connectivity_policy, intersight.api_body)
-    check_and_add_prop('WwpnPool', 'wwpn_pool', intersight.module.params, intersight.api_body)
+    check_and_add_prop_policy('WwpnPool', 'wwpn_pool', wwpn_pool, intersight.api_body)
 
     # Get the current state of the resource
     filter_str = "Name eq '" + intersight.module.params['name'] + "'"

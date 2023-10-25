@@ -1,0 +1,52 @@
+---
+# Example Playbook: cisco.intersight.intersight_virtual_fibre_channel_interface
+# Runs on localhost since policies are only configured once
+# Author: Surendra Ramarao (@CRSurendra)
+- hosts: localhost
+  connection: local
+  collections:
+    - cisco.intersight
+  gather_facts: false
+  vars:
+    # Create an anchor for api_info that can be used throughout the file
+    api_info: &api_info
+      # if api_key vars are omitted, INTERSIGHT_API_KEY_ID, INTERSIGHT_API_PRIVATE_KEY,
+      # and INTERSIGHT_API_URI environment variables used for API key data
+      api_private_key: "{{ api_private_key | default(omit) }}"
+      api_key_id: "{{ api_key_id | default(omit) }}"
+      api_uri: "{{ api_uri | default(omit) }}"
+      validate_certs: "{{ validate_certs | default(omit) }}"
+      state: "{{ state | default('present') }}"
+    wwpn_pool: TEST_WWPN_POOL
+    fc_adapter_policy: TEST_FCAP
+    fc_network_policy: TEST_FCNP
+    fc_qos_policy: TEST_FCQOS
+    sc_policy: TEST_SCP
+
+  tasks:
+    - name: Configure Virtual Fibre Channel Interface
+      intersight_virtual_fibre_channel_interface:
+        <<: *api_info
+        name: fc0
+        tags:
+          - Key: Site
+            Value: RCDN
+        placement:
+          - auto_pci_link: false
+            auto_slot_id: false
+            id: 1
+            switch_id: A
+        fc_adapter_policy: "{{ fc_adapter_policy }}"
+        fc_network_policy: "{{ fc_network_policy }}"
+        fc_qos_policy: "{{fc_qos_policy}}"
+        san_connectivity_policy: "{{sc_policy}}"
+        wwpn_pool: "{{wwpn_pool}}"
+
+
+       
+        
+
+
+        
+
+        
