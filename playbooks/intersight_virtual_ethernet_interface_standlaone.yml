@@ -19,11 +19,9 @@
       state: "{{ state | default('present') }}"
     mac_pool: cloudera-SZR-macpool
     eth_adapter_policy: TEST_EAP
-    fab_eth_network_control_policy: TEST_ENCP
-    fab_eth_network_group_policy: TEST_ENGP
+    eth_network_policy: TEST_ENP
     eth_qos_policy: TEST_EQOS
-    iscsi_boot_policy: TEST_ISBP
-    lc_policy: TEST_LCP
+    lc_policy: TEST_LCP_STANDALONE
 
   tasks:
     - name: Configure Virtual Ethernet Interface
@@ -43,12 +41,9 @@
             auto_slot_id: false
             switch_id: A
         eth_adapter_policy: "{{ eth_adapter_policy }}"
+        eth_network_policy: "{{ eth_network_policy }}"
         eth_qos_policy: "{{eth_qos_policy}}"
         lan_connectivity_policy: "{{lc_policy}}"
-        fabric_eth_network_control_policy: "{{fab_eth_network_control_policy}}"
-        fabric_eth_network_group_policy:
-          - "{{fab_eth_network_group_policy}}"
-        iscsi_boot_policy: "{{iscsi_boot_policy}}"
        
 
 

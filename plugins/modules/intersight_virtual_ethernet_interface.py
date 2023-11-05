@@ -170,6 +170,10 @@ options:
       -  An array of relationships to fabricEthNetworkGroupPolicy resources.
     type: list
     elements: str
+  iscsi_boot_policy:
+    description:
+      -  A reference to a vniciscsi_boot_policy resource.
+    type: str
   lan_connectivity_policy:
     description:
       -  A reference to a vniclan_connectivity_policy resource.
@@ -259,6 +263,11 @@ def check_and_add_prop_policy(prop, prop_key, params, api_body):
     for key in params.keys():
         api_body[prop][key] = params[key]
 
+def check_and_add_prop_policies(prop, prop_key, params, api_body):
+    api_body[prop] = []
+    for param in params:
+        api_body[prop].append(param)
+
 
 def to_camel_case(snake_str):
     return "".join(x.capitalize() for x in snake_str.lower().split("_"))
@@ -277,6 +286,21 @@ def get_policy_ref(intersight, policy_name, resource_path):
     intersight.result['trace_id'] = ''
     return {"Moid": moid}
 
+def get_policies_ref(intersight, policy_names, resource_path):
+    results = []
+    for policy_name in policy_names:
+      intersight.result['api_response'] = {}
+      intersight.result['trace_id'] = ''
+      moid = None
+      query = str.format("Name eq '{policy}'", policy=policy_name)
+      intersight.get_resource(resource_path=resource_path, query_params={"$filter": query})
+      if intersight.result['api_response'].get('Moid'):
+          # resource exists and moid was returned
+          moid = intersight.result['api_response']['Moid']
+      intersight.result['api_response'] = {}
+      intersight.result['trace_id'] = ''
+      results.append( {"Moid": moid})
+    return results
 
 def main():
     cdn_settings_spec = {
@@ -344,6 +368,10 @@ def main():
             "type": "list",
             "elements": "str"
         },
+        iscsi_boot_policy=dict(
+            type='str',
+            default=''
+        ),
         lan_connectivity_policy={
             "type": "str",
             "required": True
@@ -367,6 +395,9 @@ def main():
     eth_qos_policy = get_policy_ref(intersight, intersight.module.params['eth_qos_policy'], '/vnic/EthQosPolicies')
     lan_connectivity_policy = get_policy_ref(intersight, intersight.module.params['lan_connectivity_policy'], '/vnic/LanConnectivityPolicies')
     mac_pool = get_policy_ref(intersight, intersight.module.params['mac_pool'], '/macpool/Pools')
+    fabric_eth_network_control_policy = get_policy_ref(intersight, intersight.module.params['fabric_eth_network_control_policy'], '/fabric/EthNetworkControlPolicies')
+    fabric_eth_network_group_policies = get_policies_ref(intersight, intersight.module.params['fabric_eth_network_group_policy'], '/fabric/EthNetworkGroupPolicies')
+    iscsi_boot_policy = get_policy_ref(intersight, intersight.module.params['iscsi_boot_policy'], '/vnic/IscsiBootPolicies')
 
     #
     # Argument spec above, resource path, and API body should be the only code changed in each policy module
@@ -388,8 +419,9 @@ def main():
     check_and_add_prop_policy('EthAdapterPolicy', 'eth_adapter_policy', eth_adapter_policy, intersight.api_body)
     check_and_add_prop_policy('EthNetworkPolicy', 'eth_network_policy', eth_network_policy, intersight.api_body)
     check_and_add_prop_policy('EthQosPolicy', 'eth_qos_policy', eth_qos_policy, intersight.api_body)
-    check_and_add_prop('FabricEthNetworkControlPolicy', 'fabric_eth_network_control_policy', intersight.module.params, intersight.api_body)
-    check_and_add_prop('FabricEthNetworkGroupPolicy', 'fabric_eth_network_group_policy', intersight.module.params, intersight.api_body)
+    check_and_add_prop_policy('FabricEthNetworkControlPolicy', 'fabric_eth_network_control_policy', fabric_eth_network_control_policy, intersight.api_body)
+    check_and_add_prop_policies('FabricEthNetworkGroupPolicy', 'fabric_eth_network_group_policy', fabric_eth_network_group_policies , intersight.api_body)
+    check_and_add_prop_policy('IscsiBootPolicy', 'iscsi_boot_policy', iscsi_boot_policy, intersight.api_body)
     check_and_add_prop_policy('LanConnectivityPolicy', 'lan_connectivity_policy', lan_connectivity_policy, intersight.api_body)
     check_and_add_prop_policy('MacPool', 'mac_pool', mac_pool, intersight.api_body)
 
