@@ -12,11 +12,11 @@ ANSIBLE_METADATA = {'metadata_version': '1.1',
 
 DOCUMENTATION = r'''
 ---
-module: intersight_mac_pool
-short_description: Mac Pool configuration for Cisco Intersight
+module: intersight_iscsi_adapter_policy
+short_description: iSCSI Adapter policy configuration for Cisco Intersight
 description:
-  - Mac Pool configuration for Cisco Intersight.
-  - Used to configure Mac Pools on Cisco Intersight
+  - iSCSI Adapter policy configuration for Cisco Intersight.
+  - Used to configure iSCSI Adapter Policy on Cisco Intersight managed devices.
   - For more information see L(Cisco Intersight,https://intersight.com/apidocs).
 extends_documentation_fragment: intersight
 options:
@@ -35,7 +35,7 @@ options:
     type: str
   name:
     description:
-      - The name assigned to the Ethernent Qos policy.
+      - The name assigned to the Ethernet Adapter policy.
       - The name must be between 1 and 62 alphanumeric characters, allowing special characters :-_.
     required: true
     type: str
@@ -44,56 +44,48 @@ options:
       - List of tags in Key:<user-defined key> Value:<user-defined value> format.
     type: list
     elements : dict
-    default: []
   description:
     description:
       - The user-defined description of the Boot Order policy.
       - Description can contain letters(a-z, A-Z), numbers(0-9), hyphen(-), period(.), colon(:), or an underscore(_).
     aliases: [descr]
     type: str
-    default: ''
-  mac_blocks:
+  connection_time_out:
     description:
-      -  Collection of MAC blocks.
-    type: list
-    elements: dict
-    suboptions:
-      from:
-        description:
-          - 'Starting address of the block must be in hexadecimal format xx:xx:xx:xx:xx:xx. To ensure uniqueness of MACs in the LAN fabric, you are strongly'
-          - 'encouraged to use the following MAC prefix 00:25:B5:xx:xx:xx.'
-        type: str
-        default: ''
-      to:
-        description:
-          - 'Ending address of the block must be in hexadecimal format xx:xx:xx:xx:xx:xx.'
-        type: str
-        default: ''
+      -  The number of seconds to wait until Cisco UCS assumes that the initial login has failed and the iSCSI adapter is unavailable.
+    type: int
+  dhcp_timeout:
+    description:
+      -  The number of seconds to wait before the initiator assumes that the DHCP server is unavailable.
+    type: int
+  lun_busy_retry_count:
+    description:
+      -  The number of times to retry the connection in case of a failure during iSCSI LUN discovery.
+    type: int
 author:
   - Surendra Ramarao (@CRSurendra)
 '''
 
 EXAMPLES = r'''
-- name: Configure Mac Pool
-  cisco.intersight.intersight_mac_pool:
+- name: Configure iSCSI Adapter Policy
+  cisco.intersight.intersight_iscsi_adapter_policy:
     api_private_key: "{{ api_private_key }}"
     api_key_id: "{{ api_key_id }}"
     organization: DevNet
-    name: COS-MP
-    description: MAC Pool for COS
+    name: COS-ISAP
+    description: iSCSI adapter policy for COS
     tags:
       - Key: Site
         Value: RCDN
-    mac_blocks:
-      - from: '00:25:B5:xx:xx:xx'
-        to: '00:25:B5:xx:xx:xx'
+    connection_time_out: 30
 
-- name: Delete Mac Pool
-  cisco.intersight.intersight_mac_pool:
+
+- name: Delete iSCSI Adapter Policy
+  cisco.intersight.intersight_iscsi_adapter_policy:
     api_private_key: "{{ api_private_key }}"
     api_key_id: "{{ api_key_id }}"
     organization: DevNet
-    name: COS-MP
+    name: COS-ISAP
     state: absent
 '''
 
@@ -104,8 +96,8 @@ api_repsonse:
   type: dict
   sample:
     "api_response": {
-        "Name": "COS-MP",
-        "ObjectType": "macpool.Pool",
+        "Name": "COS-ISAP",
+        "ObjectType": "vnic.IscsiAdapterPolicy",
         "Tags": [
             {
                 "Key": "Site",
@@ -120,43 +112,27 @@ from ansible.module_utils.basic import AnsibleModule
 from ansible_collections.cisco.intersight.plugins.module_utils.intersight import IntersightModule, intersight_argument_spec
 
 
-def check_and_add_prop_dict_array(prop, prop_key, params, api_body):
+def check_and_add_prop(prop, prop_key, params, api_body):
     if prop_key in params.keys():
-        api_body[prop] = []
-        if params[prop_key] :
-            for item in params[prop_key]:
-                item_dict = {}
-                for key in item.keys():
-                    item_dict[to_camel_case(key)] = item[key]
-                api_body[prop].append(item_dict)
-
-
-def to_camel_case(snake_str):
-    return "".join(x.capitalize() for x in snake_str.lower().split("_"))
+        api_body[prop] = params[prop_key]
 
 
 def main():
-    mac_blocks_spec = {
-        "from": {
-            "type": "str",
-            "default": ""
-        },
-        "to": {
-            "type": "str",
-            "default": ""
-        },
-    }
     argument_spec = intersight_argument_spec
     argument_spec.update(
         state={"type": "str", "choices": ['present', 'absent'], "default": "present"},
         organization={"type": "str", "default": "default"},
         name={"type": "str", "required": True},
-        description={"type": "str", "aliases": ['descr'], "default": ""},
-        tags={"type": "list", "default": [], "elements": "dict"},
-        mac_blocks={
-            "type": "list",
-            "options": mac_blocks_spec,
-            "elements": "dict",
+        description={"type": "str", "aliases": ['descr']},
+        tags={"type": "list", "elements": "dict"},
+        connection_time_out={
+            "type": "int",
+        },
+        dhcp_timeout={
+            "type": "int",
+        },
+        lun_busy_retry_count={
+            "type": "int",
         },
     )
 
@@ -172,7 +148,7 @@ def main():
     # Argument spec above, resource path, and API body should be the only code changed in each policy module
     #
     # Resource path used to configure policy
-    resource_path = '/macpool/Pools'
+    resource_path = '/vnic/IscsiAdapterPolicies'
     # Define API body used in compares or create
     intersight.api_body = {
         'Organization': {
@@ -182,7 +158,9 @@ def main():
         'Tags': intersight.module.params['tags'],
         'Description': intersight.module.params['description'],
     }
-    check_and_add_prop_dict_array('MacBlocks', 'mac_blocks', intersight.module.params, intersight.api_body)
+    check_and_add_prop('ConnectionTimeOut', 'connection_time_out', intersight.module.params, intersight.api_body)
+    check_and_add_prop('DhcpTimeout', 'dhcp_timeout', intersight.module.params, intersight.api_body)
+    check_and_add_prop('LunBusyRetryCount', 'lun_busy_retry_count', intersight.module.params, intersight.api_body)
     #
     # Code below should be common across all policy modules
     #

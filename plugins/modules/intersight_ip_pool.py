@@ -12,11 +12,11 @@ ANSIBLE_METADATA = {'metadata_version': '1.1',
 
 DOCUMENTATION = r'''
 ---
-module: intersight_mac_pool
-short_description: Mac Pool configuration for Cisco Intersight
+module: intersight_ip_pool
+short_description: IP Pool configuration for Cisco Intersight
 description:
-  - Mac Pool configuration for Cisco Intersight.
-  - Used to configure Mac Pools on Cisco Intersight
+  - IP Pool configuration for Cisco Intersight.
+  - Used to configure IP Pools on Cisco Intersight
   - For more information see L(Cisco Intersight,https://intersight.com/apidocs).
 extends_documentation_fragment: intersight
 options:
@@ -52,48 +52,108 @@ options:
     aliases: [descr]
     type: str
     default: ''
-  mac_blocks:
+  ip_v4_blocks:
     description:
-      -  Collection of MAC blocks.
+      -  Collection of IPv4 blocks.
     type: list
     elements: dict
     suboptions:
       from:
         description:
-          - 'Starting address of the block must be in hexadecimal format xx:xx:xx:xx:xx:xx. To ensure uniqueness of MACs in the LAN fabric, you are strongly'
-          - 'encouraged to use the following MAC prefix 00:25:B5:xx:xx:xx.'
+          -  First IPv4 address of the block.
         type: str
-        default: ''
       to:
         description:
-          - 'Ending address of the block must be in hexadecimal format xx:xx:xx:xx:xx:xx.'
+          -  Last IPv4 address of the block.
         type: str
-        default: ''
+  ip_v4_config:
+    description:
+      -  Netmask, Gateway and DNS settings for IPv4 addresses.
+    type: list
+    elements: dict
+    suboptions:      
+      gateway:
+        description:
+          -  IP address of the default IPv4 gateway.
+        type: str
+      netmask:
+        description:
+          -  A subnet mask is a 32-bit number that masks an IP address and divides the IP address into network address and host address.
+        type: str
+      primary_dns:
+        description:
+          -  IP Address of the primary Domain Name System (DNS) server.
+        type: str
+      secondary_dns:
+        description:
+          -  IP Address of the secondary Domain Name System (DNS) server.
+        type: str
+  ip_v6_blocks:
+    description:
+      -  Collection of IPv6 blocks.
+    type: list
+    elements: dict
+    suboptions:      
+      from:
+        description:
+          -  First IPv6 address of the block.
+        type: str
+      to:
+        description:
+          -  Last IPv6 address of the block.
+        type: str
+  ip_v6_config:
+    description:
+      -  Netmask, Gateway and DNS settings for IPv6 addresses.
+    type: list
+    elements: dict
+    suboptions:
+      gateway:
+        description:
+          -  IP address of the default IPv6 gateway.
+        type: str
+      prefix:
+        description:
+          -  A prefix length which masks the  IP address and divides the IP address into network address and host address.
+        type: int
+      primary_dns:
+        description:
+          -  IP Address of the primary Domain Name System (DNS) server.
+        type: str
+      secondary_dns:
+        description:
+          -  IP Address of the secondary Domain Name System (DNS) server.
+        type: str
 author:
   - Surendra Ramarao (@CRSurendra)
 '''
 
 EXAMPLES = r'''
-- name: Configure Mac Pool
-  cisco.intersight.intersight_mac_pool:
+- name: Configure IP Pool
+  cisco.intersight.intersight_ip_pool:
     api_private_key: "{{ api_private_key }}"
     api_key_id: "{{ api_key_id }}"
     organization: DevNet
-    name: COS-MP
-    description: MAC Pool for COS
+    name: COS-IPP
+    description: IP Pool for COS
     tags:
       - Key: Site
         Value: RCDN
-    mac_blocks:
-      - from: '00:25:B5:xx:xx:xx'
-        to: '00:25:B5:xx:xx:xx'
+    ip_v4_blocks:
+      - from: 10.1.1.2
+        to: 10.1.1.25
+    ip_v4_config:
+      - gateway: 10.1.1.1
+        netmask: 255.255.255.0
+        primary_dns: 172.121.234.231
+        secondary_dns: 10.45.67.89
 
-- name: Delete Mac Pool
-  cisco.intersight.intersight_mac_pool:
+- name: Delete IP Pool
+  cisco.intersight.intersight_ip_pool:
     api_private_key: "{{ api_private_key }}"
     api_key_id: "{{ api_key_id }}"
     organization: DevNet
-    name: COS-MP
+    name: COS-IPP
     state: absent
 '''
 
@@ -104,8 +164,8 @@ api_repsonse:
   type: dict
   sample:
     "api_response": {
-        "Name": "COS-MP",
-        "ObjectType": "macpool.Pool",
+        "Name": "COS-IPP",
+        "ObjectType": "ippool.Pool",
         "Tags": [
             {
                 "Key": "Site",
@@ -130,13 +190,21 @@ def check_and_add_prop_dict_array(prop, prop_key, params, api_body):
                     item_dict[to_camel_case(key)] = item[key]
                 api_body[prop].append(item_dict)
 
+def check_and_add_prop_dict(prop, prop_key, params, api_body):
+    if prop_key in params.keys():
+        api_body[prop] = {}
+        if params[prop_key] :
+            for item in params[prop_key]:
+                for key in item.keys():
+                    api_body[prop][to_camel_case(key)] = item[key]
+
 
 def to_camel_case(snake_str):
     return "".join(x.capitalize() for x in snake_str.lower().split("_"))
 
 
 def main():
-    mac_blocks_spec = {
+    ip_v4_blocks_spec = {
         "from": {
             "type": "str",
             "default": ""
@@ -144,7 +212,52 @@ def main():
         "to": {
             "type": "str",
             "default": ""
-        },
+          },
+    }
+    ip_v4_config_spec = {
+        "gateway": {
+            "type": "str",
+            "default": ""
+          },
+        "netmask": {
+            "type": "str",
+            "default": ""
+          },
+        "primary_dns": {
+            "type": "str",
+            "default": ""
+          },
+        "secondary_dns": {
+            "type": "str",
+            "default": ""
+          },
+    }
+    ip_v6_blocks_spec = {
+        "from": {
+            "type": "str",
+            "default": ""
+          },
+        "to": {
+            "type": "str",
+            "default": ""
+          },
+    }
+    ip_v6_config_spec = {
+        "gateway": {
+            "type": "str",
+            "default": ""
+          },
+        "prefix": {
+            "type": "int",
+          },
+        "primary_dns": {
+            "type": "str",
+            "default": ""
+          },
+        "secondary_dns": {
+            "type": "str",
+            "default": ""
+          },
     }
     argument_spec = intersight_argument_spec
     argument_spec.update(
@@ -153,9 +266,24 @@ def main():
         name={"type": "str", "required": True},
         description={"type": "str", "aliases": ['descr'], "default": ""},
         tags={"type": "list", "default": [], "elements": "dict"},
-        mac_blocks={
+        ip_v4_blocks={
             "type": "list",
-            "options": mac_blocks_spec,
+            "options": ip_v4_blocks_spec,
+            "elements": "dict",
+        },
+        ip_v4_config={
+            "type": "list",
+            "options": ip_v4_config_spec,
+            "elements": "dict",
+        },
+        ip_v6_blocks={
+            "type": "list",
+            "options": ip_v6_blocks_spec,
+            "elements": "dict",
+        },
+        ip_v6_config={
+            "type": "list",
+            "options": ip_v6_config_spec,
             "elements": "dict",
         },
     )
@@ -172,7 +300,7 @@ def main():
     # Argument spec above, resource path, and API body should be the only code changed in each policy module
     #
     # Resource path used to configure policy
-    resource_path = '/macpool/Pools'
+    resource_path = '/ippool/Pools'
     # Define API body used in compares or create
     intersight.api_body = {
         'Organization': {
@@ -182,7 +310,10 @@ def main():
         'Tags': intersight.module.params['tags'],
         'Description': intersight.module.params['description'],
     }
-    check_and_add_prop_dict_array('MacBlocks', 'mac_blocks', intersight.module.params, intersight.api_body)
+    check_and_add_prop_dict_array('IpV4Blocks', 'ip_v4_blocks', intersight.module.params, intersight.api_body)
+    check_and_add_prop_dict('IpV4Config', 'ip_v4_config', intersight.module.params, intersight.api_body)
+    check_and_add_prop_dict_array('IpV6Blocks', 'ip_v6_blocks', intersight.module.params, intersight.api_body)
+    check_and_add_prop_dict('IpV6Config', 'ip_v6_config', intersight.module.params, intersight.api_body)
     #
     # Code below should be common across all policy modules
     #
