@@ -12,11 +12,11 @@ ANSIBLE_METADATA = {'metadata_version': '1.1',
 
 DOCUMENTATION = r'''
 ---
-module: intersight_iscsi_adapter_policy
-short_description: iSCSI Adapter policy configuration for Cisco Intersight
+module: intersight_fibre_channel_zone_policy
+short_description: Fibre Channel Zone policy configuration for Cisco Intersight
 description:
-  - iSCSI Adapter policy configuration for Cisco Intersight.
-  - Used to configure iSCSI Adapter Policy on Cisco Intersight managed devices.
+  - Fibre Channel Zone policy configuration for Cisco Intersight.
+  - Used to configure Fibre Channel Zone Policy on Cisco Intersight managed devices.
   - For more information see L(Cisco Intersight,https://intersight.com/apidocs).
 extends_documentation_fragment: intersight
 options:
@@ -35,7 +35,7 @@ options:
     type: str
   name:
     description:
-      - The name assigned to the iSCSI Adapter policy.
+      - The name assigned to the Fibre Channel Zone policy.
       - The name must be between 1 and 62 alphanumeric characters, allowing special characters :-_.
     required: true
     type: str
@@ -50,42 +50,72 @@ options:
       - Description can contain letters(a-z, A-Z), numbers(0-9), hyphen(-), period(.), colon(:), or an underscore(_).
     aliases: [descr]
     type: str
-  connection_time_out:
+  fc_target_members:
     description:
-      -  The number of seconds to wait until Cisco UCS assumes that the initial login has failed and the iSCSI adapter is unavailable.
-    type: int
-  dhcp_timeout:
+      -  List of target WWPN members that are part of the zone.
+    type: list
+    elements: dict
+    suboptions:
+      name:
+        description:
+          -  name given to the target member.
+        type: str
+        default: ""
+      switch_id:
+        description:
+          -  Unique identifier for the Fabric object.
+          -  A - Switch Identifier of Fabric Interconnect A.
+          -  B - Switch Identifier of Fabric Interconnect B.
+        choices: ['A' , 'B']
+        default: A
+        type: str
+      vsan_id:
+        description:
+          -  VSAN with scope defined as Storage in the VSAN policy.
+        type: int
+      wwpn:
+        description:
+          -  WWPN that is a member of the FC zone.
+        type: str
+        default: ""
+  fc_target_zoning_type:
     description:
-      -  The number of seconds to wait before the initiator assumes that the DHCP server is unavailable.
-    type: int
-  lun_busy_retry_count:
-    description:
-      -  The number of times to retry the connection in case of a failure during iSCSI LUN discovery.
-    type: int
+      -  Type of FC zoning. Allowed values are SIST, SIMT and None.
+      -  SIST - The system automatically creates one zone for each vHBA and storage port pair. Each zone has two members.
+      -  SIMT - The system automatically creates one zone for each vHBA. Configure this type of zoning if the number of zones created is likely to
+      -  exceed the maximum supported number of zones.
+      -  None - FC zoning is not configured.
+    choices: ['SIST' , 'SIMT' , 'None']
+    default: SIST
+    type: str
 author:
   - Surendra Ramarao (@CRSurendra)
 '''
 
 EXAMPLES = r'''
-- name: Configure iSCSI Adapter Policy
-  cisco.intersight.intersight_iscsi_adapter_policy:
+- name: Configure Fibre Channel Zone Policy
+  cisco.intersight.intersight_fibre_channel_zone_policy:
     api_private_key: "{{ api_private_key }}"
     api_key_id: "{{ api_key_id }}"
     organization: DevNet
-    name: COS-ISAP
-    description: iSCSI adapter policy for COS
+    name: COS-FCZP
+    description: Fibre Channel Zone policy for COS
     tags:
       - Key: Site
         Value: RCDN
-    connection_time_out: 30
+    fc_target_zoning_type: SIST
+    fc_target_members:
+      - name: TEST1
+        switch_id: A
+        vsan_id: 1
+        wwpn: 20:00:00:25:B5:FF:00:00
 
-
-- name: Delete iSCSI Adapter Policy
-  cisco.intersight.intersight_iscsi_adapter_policy:
+- name: Delete Fibre Channel Zone Policy
+  cisco.intersight.intersight_fibre_channel_zone_policy:
     api_private_key: "{{ api_private_key }}"
     api_key_id: "{{ api_key_id }}"
     organization: DevNet
-    name: COS-ISAP
+    name: COS-FCZP
     state: absent
 '''
 
@@ -96,8 +126,8 @@ api_repsonse:
   type: dict
   sample:
     "api_response": {
-        "Name": "COS-ISAP",
-        "ObjectType": "vnic.IscsiAdapterPolicy",
+        "Name": "COS-FCZP",
+        "ObjectType": "fabric.FcZonePolicy",
         "Tags": [
             {
                 "Key": "Site",
@@ -112,12 +142,48 @@ from ansible.module_utils.basic import AnsibleModule
 from ansible_collections.cisco.intersight.plugins.module_utils.intersight import IntersightModule, intersight_argument_spec
 
 
-def check_and_add_prop(prop, prop_key, params, api_body):
+def check_and_add_prop(prop, propKey, params, api_body):
+    if propKey in params.keys():
+        api_body[prop] = params[propKey]
+
+
+def check_and_add_prop_dict_array(prop, prop_key, params, api_body):
     if prop_key in params.keys():
-        api_body[prop] = params[prop_key]
+        api_body[prop] = []
+        if params[prop_key] :
+            for item in params[prop_key]:
+                item_dict = {}
+                for key in item.keys():
+                    item_dict[to_camel_case(key)] = item[key]
+                api_body[prop].append(item_dict)
+
+
+def to_camel_case(snake_str):
+    return "".join(x.capitalize() for x in snake_str.lower().split("_"))
 
 
 def main():
+    fc_target_members_spec = {
+        "name": {
+            "type": "str",
+            "default": ""
+        },
+        "switch_id": {
+            "type": "str",
+            "choices": [
+                'A',
+                'B'
+            ],
+            "default": "A"
+        },
+        "vsan_id": {
+            "type": "int",
+        },
+        "wwpn": {
+            "type": "str",
+            "default": ""
+        },
+    }
     argument_spec = intersight_argument_spec
     argument_spec.update(
         state={"type": "str", "choices": ['present', 'absent'], "default": "present"},
@@ -125,14 +191,19 @@ def main():
         name={"type": "str", "required": True},
         description={"type": "str", "aliases": ['descr']},
         tags={"type": "list", "elements": "dict"},
-        connection_time_out={
-            "type": "int",
+        fc_target_members={
+            "type": "list",
+            "options": fc_target_members_spec,
+            "elements": "dict",
         },
-        dhcp_timeout={
-            "type": "int",
-        },
-        lun_busy_retry_count={
-            "type": "int",
+        fc_target_zoning_type={
+            "type": "str",
+            "choices": [
+                'SIST',
+                'SIMT',
+                'None'
+            ],
+            "default": "SIST"
         },
     )
 
@@ -148,7 +219,7 @@ def main():
     # Argument spec above, resource path, and API body should be the only code changed in each policy module
     #
     # Resource path used to configure policy
-    resource_path = '/vnic/IscsiAdapterPolicies'
+    resource_path = '/fabric/FcZonePolicies'
     # Define API body used in compares or create
     intersight.api_body = {
         'Organization': {
@@ -158,9 +229,8 @@ def main():
         'Tags': intersight.module.params['tags'],
         'Description': intersight.module.params['description'],
     }
-    check_and_add_prop('ConnectionTimeOut', 'connection_time_out', intersight.module.params, intersight.api_body)
-    check_and_add_prop('DhcpTimeout', 'dhcp_timeout', intersight.module.params, intersight.api_body)
-    check_and_add_prop('LunBusyRetryCount', 'lun_busy_retry_count', intersight.module.params, intersight.api_body)
+    check_and_add_prop_dict_array('FcTargetMembers', 'fc_target_members', intersight.module.params, intersight.api_body)
+    check_and_add_prop('FcTargetZoningType', 'fc_target_zoning_type', intersight.module.params, intersight.api_body)
     #
     # Code below should be common across all policy modules
     #

@@ -1,0 +1,59 @@
+---
+# Example Playbook: cisco.intersight.intersight_fc_pool
+# Runs on localhost since policies are only configured once
+# Author: Surendra Ramarao (@CRSurendra)
+- hosts: localhost
+  connection: local
+  collections:
+    - cisco.intersight
+  gather_facts: false
+  vars:
+    # Create an anchor for api_info that can be used throughout the file
+    api_info: &api_info
+      # if api_key vars are omitted, INTERSIGHT_API_KEY_ID, INTERSIGHT_API_PRIVATE_KEY,
+      # and INTERSIGHT_API_URI environment variables used for API key data
+      api_private_key: "{{ api_private_key | default(omit) }}"
+      api_key_id: "{{ api_key_id | default(omit) }}"
+      api_uri: "{{ api_uri | default(omit) }}"
+      validate_certs: "{{ validate_certs | default(omit) }}"
+      state: "{{ state | default('present') }}"
+    # Organization name
+    org_name: Cloudera-SZR-Org
+  tasks:
+    - name: Configure FC Pool WWPN
+      intersight_fc_pool:
+        <<: *api_info
+        organization: "{{ org_name }}"
+        name: TEST_WWPN_1
+        description: WWPN Pool Test
+        tags:
+          - Key: Site
+            Value: RCDN
+        pool_purpose: WWPN
+        id_blocks:
+          - from: 20:00:00:25:B5:FA:00:00
+            to: 20:00:00:25:B5:FA:00:10
+          - from: 20:00:00:25:B5:FB:00:00
+            to: 20:00:00:25:B5:FB:00:10
+    - name: Configure FC Pool WWPN
+      intersight_fc_pool:
+        <<: *api_info
+        organization: "{{ org_name }}"
+        name: TEST_WWNN_1
+        description: WWNN Pool Test
+        tags:
+          - Key: Site
+            Value: RCDN
+        pool_purpose: WWNN
+        id_blocks:
+          - from: 20:00:00:25:B5:FC:00:00
+            to: 20:00:00:25:B5:FC:00:10
+          - from: 20:00:00:25:B5:FD:00:00
+            to: 20:00:00:25:B5:FD:00:10
+    
+        
+
+
+        
+
+        
