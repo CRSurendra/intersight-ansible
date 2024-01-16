@@ -54,7 +54,6 @@ options:
     description:
       -  The IPv4 address assigned to the iSCSI target.
     type: str
-    default: ""
   lun:
     description:
       -  The LUN parameters associated with an iSCSI target.
@@ -77,7 +76,6 @@ options:
     description:
       -  Qualified Name (IQN) or Extended Unique Identifier (EUI) name of the iSCSI target.
     type: str
-    default: ""
 author:
   - Surendra Ramarao (@CRSurendra)
 '''
@@ -135,7 +133,8 @@ from ansible_collections.cisco.intersight.plugins.module_utils.intersight import
 
 def check_and_add_prop(prop, prop_key, params, api_body):
     if prop_key in params.keys():
-        api_body[prop] = params[prop_key]
+        if params[prop_key]:
+            api_body[prop] = params[prop_key]
 
 
 def check_and_add_prop_dict(prop, prop_key, params, api_body):
@@ -144,7 +143,8 @@ def check_and_add_prop_dict(prop, prop_key, params, api_body):
         if params[prop_key] :
             for item in params[prop_key]:
                 for key in item.keys():
-                    api_body[prop][to_camel_case(key)] = item[key]
+                    if item[key]:
+                        api_body[prop][to_camel_case(key)] = item[key]
 
 
 def to_camel_case(snake_str):
@@ -169,7 +169,6 @@ def main():
         tags={"type": "list", "elements": "dict"},
         ip_address={
             "type": "str",
-            "default": ""
         },
         lun={
             "type": "list",
@@ -181,7 +180,6 @@ def main():
         },
         target_name={
             "type": "str",
-            "default": ""
         },
     )
 

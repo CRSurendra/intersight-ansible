@@ -114,7 +114,8 @@ from ansible_collections.cisco.intersight.plugins.module_utils.intersight import
 
 def check_and_add_prop(prop, prop_key, params, api_body):
     if prop_key in params.keys():
-        api_body[prop] = params[prop_key]
+        if params[prop_key]:
+            api_body[prop] = params[prop_key]
 
 
 def main():

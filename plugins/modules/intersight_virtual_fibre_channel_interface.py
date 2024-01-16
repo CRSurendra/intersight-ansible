@@ -57,7 +57,6 @@ options:
       - Pingroup name associated to vfc for static pinning. SCP deploy will resolve pingroup name and fetches the correspoding uplink port/port
       - channel to pin the vfc traffic.
     type: str
-    default: ''
   placement:
     description:
       -  placement Settings for the virtual interface.
@@ -81,7 +80,6 @@ options:
         description:
           - PCIe Slot where the VIC adapter is installed. Supported values are (1-15) and MLOM.
         type: str
-        default: ''
       pci_link:
         description:
           - The PCI Link used as transport for the virtual interface. PCI Link is only applicable for select
@@ -119,7 +117,6 @@ options:
       - 'Allowed ranges are 20:00:00:00:00:00:00:00 to 20:FF:FF:FF:FF:FF:FF:FF or from 50:00:00:00:00:00:00:00 to 5F:FF:FF:FF:FF:FF:FF:FF.'
       - 'To ensure uniqueness of WWNs in the SAN fabric, you are strongly encouraged to use the WWN prefix - 20:00:00:25:B5:xx:xx:xx.'
     type: str
-    default: ''
   type:
     description:
       -  VHBA type configuration for SAN Connectivity Policy. This configuration is supported only on Cisco VIC 14XX series and higher series of adapters.
@@ -147,29 +144,24 @@ options:
       -  A reference to a vnicfc_adapter_policy resource.
       - When the $expand query parameter is specified, the referenced resource is returned inline.
     type: str
-    default: ''
   fc_network_policy:
     description:
       -  A reference to a vnicfc_network_policy resource.
       - When the $expand query parameter is specified, the referenced resource is returned inline.
     type: str
-    default: ''
   fc_qos_policy:
     description:
       -  A reference to a vnicfc_qos_policy resource.
       - When the $expand query parameter is specified, the referenced resource is returned inline.
     type: str
-    default: ''
   san_connectivity_policy:
     description:
       -  A reference to a vnicsan_connectivity_policy resource.
     type: str
-    default: ''
   wwpn_pool:
     description:
       -  A reference to a fcpoolPool resource.
     type: str
-    default: ''
 
 author:
   - Surendra Ramarao (@CRSurendra)
@@ -227,7 +219,8 @@ from ansible_collections.cisco.intersight.plugins.module_utils.intersight import
 
 def check_and_add_prop(prop, prop_key, params, api_body):
     if prop_key in params.keys():
-        api_body[prop] = params[prop_key]
+        if params[prop_key]:
+            api_body[prop] = params[prop_key]
 
 
 def check_and_add_prop_dict(prop, prop_key, params, api_body):
@@ -236,13 +229,15 @@ def check_and_add_prop_dict(prop, prop_key, params, api_body):
         if params[prop_key] :
             for item in params[prop_key]:
                 for key in item.keys():
-                    api_body[prop][to_camel_case(key)] = item[key]
+                    if item[key]:
+                        api_body[prop][to_camel_case(key)] = item[key]
 
 
 def check_and_add_prop_policy(prop, prop_key, params, api_body):
     api_body[prop] = {}
     for key in params.keys():
-        api_body[prop][key] = params[key]
+        if params[key]:
+            api_body[prop][key] = params[key]
 
 
 def to_camel_case(snake_str):
@@ -268,7 +263,7 @@ def main():
     placement_settings_spec = {
         "auto_pci_link" : {"type": "bool", "default": "False"},
         "auto_slot_id" : {"type": "bool", "default": "False"},
-        "id" : {"type": "str", "default": ''},
+        "id" : {"type": "str"},
         "pci_link" : {"type": "int", "default": 0},
         "pci_link_assignment_mode" : {"type": "str", "choices": ['Custom', 'Load-Balanced', 'None'], "default": 'Custom'},
         "switch_id" : {"type": "str", "choices": ['None', 'A', 'B'], "default": 'None'},
@@ -281,7 +276,7 @@ def main():
         tags={"type": "list", "elements": "dict"},
         order={"type": "int", "default": 0},
         persistent_bindings={"type": "bool", "default": False},
-        pin_group_name={"type": "str", "default": ""},
+        pin_group_name={"type": "str"},
         placement={
             "type": "list",
             "elements": "dict",
@@ -289,7 +284,6 @@ def main():
         },
         static_wwpn_address={
             "type": "str",
-            "default": ""
         },
         type={
             "type": "str",
@@ -311,29 +305,28 @@ def main():
         },
         fc_adapter_policy={
             "type": "str",
-            "default": ""
         },
         fc_network_policy={
             "type": "str",
-            "default": ""
         },
         fc_qos_policy={
             "type": "str",
-            "default": ""
         },
         san_connectivity_policy={
             "type": "str",
-            "default": ""
         },
         wwpn_pool={
             "type": "str",
-            "default": ""
         },
     )
 
     module = AnsibleModule(
         argument_spec,
         supports_check_mode=True,
+        required_if=[
+            ('wwpn_address_type', 'POOL', ('wwpn_pool', )),
+            ('wwpn_address_type', 'STATIC', ('static_wwpn_address',)),
+        ]
     )
 
     intersight = IntersightModule(module)

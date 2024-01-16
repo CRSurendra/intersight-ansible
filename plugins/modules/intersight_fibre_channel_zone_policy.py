@@ -60,7 +60,6 @@ options:
         description:
           -  name given to the target member.
         type: str
-        default: ""
       switch_id:
         description:
           -  Unique identifier for the Fabric object.
@@ -77,7 +76,6 @@ options:
         description:
           -  WWPN that is a member of the FC zone.
         type: str
-        default: ""
   fc_target_zoning_type:
     description:
       -  Type of FC zoning. Allowed values are SIST, SIMT and None.
@@ -142,9 +140,10 @@ from ansible.module_utils.basic import AnsibleModule
 from ansible_collections.cisco.intersight.plugins.module_utils.intersight import IntersightModule, intersight_argument_spec
 
 
-def check_and_add_prop(prop, propKey, params, api_body):
-    if propKey in params.keys():
-        api_body[prop] = params[propKey]
+def check_and_add_prop(prop, prop_key, params, api_body):
+    if prop_key in params.keys():
+        if params[prop_key]:
+            api_body[prop] = params[prop_key]
 
 
 def check_and_add_prop_dict_array(prop, prop_key, params, api_body):
@@ -154,7 +153,8 @@ def check_and_add_prop_dict_array(prop, prop_key, params, api_body):
             for item in params[prop_key]:
                 item_dict = {}
                 for key in item.keys():
-                    item_dict[to_camel_case(key)] = item[key]
+                    if item[key]:
+                        item_dict[to_camel_case(key)] = item[key]
                 api_body[prop].append(item_dict)
 
 
@@ -166,7 +166,6 @@ def main():
     fc_target_members_spec = {
         "name": {
             "type": "str",
-            "default": ""
         },
         "switch_id": {
             "type": "str",
@@ -181,7 +180,6 @@ def main():
         },
         "wwpn": {
             "type": "str",
-            "default": ""
         },
     }
     argument_spec = intersight_argument_spec

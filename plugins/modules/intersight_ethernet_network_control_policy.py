@@ -147,7 +147,8 @@ from ansible_collections.cisco.intersight.plugins.module_utils.intersight import
 
 def check_and_add_prop(prop, prop_key, params, api_body):
     if prop_key in params.keys():
-        api_body[prop] = params[prop_key]
+        if params[prop_key]:
+            api_body[prop] = params[prop_key]
 
 
 def check_and_add_prop_dict(prop, prop_key, params, api_body):
@@ -156,7 +157,8 @@ def check_and_add_prop_dict(prop, prop_key, params, api_body):
         if params[prop_key] :
             for item in params[prop_key]:
                 for key in item.keys():
-                    api_body[prop][to_camel_case(key)] = item[key]
+                    if item[key]:
+                        api_body[prop][to_camel_case(key)] = item[key]
 
 
 def to_camel_case(snake_str):

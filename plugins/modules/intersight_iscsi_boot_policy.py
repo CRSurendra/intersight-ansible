@@ -54,7 +54,6 @@ options:
     description:
       -  Auto target interface that is represented via the Initiator name or the DHCP vendor ID. The vendor ID can be up to 32 alphanumeric characters.
     type: str
-    default: ''
   chap:
     description:
       -  CHAP authentication parameters for iSCSI Target.
@@ -70,12 +69,10 @@ options:
         description:
           -  password of Initiator/Target Interface. Enter between 12 and 16 characters, including special characters except spaces, tabs, line breaks.
         type: str
-        default: ''
       user_id:
         description:
           -  User Id of Initiator/Target Interface. Enter between 1 and 128 characters, spaces, or special characters.
         type: str
-        default: ''
   initiator_ip_source:
     description:
       -  Source Type of Initiator IP Address - Auto/Static/Pool.
@@ -89,7 +86,6 @@ options:
     description:
       -  Static IP address provided for iSCSI Initiator.
     type: str
-    default: ''
   initiator_static_ip_v4_config:
     description:
       -  IPV4 configurations such as Netmask, Gateway and DNS for iSCSI Initiator.
@@ -100,22 +96,18 @@ options:
         description:
           -  IP address of the default IPv4 gateway.
         type: str
-        default: ''
       netmask:
         description:
           -  A subnet mask is a 32-bit number that masks an IP address and divides the IP address into network address and host address.
         type: str
-        default: ''
       primary_dns:
         description:
           -  IP Address of the primary Domain Name System (DNS) server.
         type: str
-        default: ''
       secondary_dns:
         description:
           -  IP Address of the secondary Domain Name System (DNS) server.
         type: str
-        default: ''
   mutual_chap:
     description:
       -  Mutual CHAP authentication parameters for iSCSI Initiator. Two-way CHAP mechanism.
@@ -131,12 +123,10 @@ options:
         description:
           -  password of Initiator/Target Interface. Enter between 12 and 16 characters, including special characters except spaces, tabs, line breaks.
         type: str
-        default: ''
       user_id:
         description:
           -  User Id of Initiator/Target Interface. Enter between 1 and 128 characters, spaces, or special characters.
         type: str
-        default: ''
   target_source_type:
     description:
       -  Source Type of Targets - Auto/Static.
@@ -149,22 +139,18 @@ options:
     description:
       -  A reference to a ippoolPool resource.
     type: str
-    default: ''
   iscsi_adapter_policy:
     description:
       -  A reference to a vniciscsi_adapter_policy resource.
     type: str
-    default: ''
   primary_target_policy:
     description:
       -  A reference to a vnicIscsiStaticTargetPolicy resource.
     type: str
-    default: ''
   secondary_target_policy:
     description:
       -  A reference to a vnicIscsiStaticTargetPolicy resource.
     type: str
-    default: ''
 author:
   - Surendra Ramarao (@CRSurendra)
 '''
@@ -213,9 +199,10 @@ from ansible.module_utils.basic import AnsibleModule
 from ansible_collections.cisco.intersight.plugins.module_utils.intersight import IntersightModule, intersight_argument_spec
 
 
-def check_and_add_prop(prop, propKey, params, api_body):
-    if propKey in params.keys():
-        api_body[prop] = params[propKey]
+def check_and_add_prop(prop, prop_key, params, api_body):
+    if prop_key in params.keys():
+        if params[prop_key]:
+            api_body[prop] = params[prop_key]
 
 
 def check_and_add_prop_dict(prop, prop_key, params, api_body):
@@ -224,13 +211,15 @@ def check_and_add_prop_dict(prop, prop_key, params, api_body):
         if params[prop_key] :
             for item in params[prop_key]:
                 for key in item.keys():
-                    api_body[prop][to_camel_case(key)] = item[key]
+                    if item[key]:
+                        api_body[prop][to_camel_case(key)] = item[key]
 
 
 def check_and_add_prop_policy(prop, prop_key, params, api_body):
     api_body[prop] = {}
     for key in params.keys():
-        api_body[prop][key] = params[key]
+        if params[key]:
+            api_body[prop][key] = params[key]
 
 
 def to_camel_case(snake_str):
@@ -259,30 +248,24 @@ def main():
         },
         "password": {
             "type": "str",
-            "default": "",
             "no_log": True
         },
         "user_id": {
             "type": "str",
-            "default": ""
         },
     }
     initiator_static_ip_v4_config_spec = {
         "gateway": {
             "type": "str",
-            "default": ""
         },
         "netmask": {
             "type": "str",
-            "default": ""
         },
         "primary_dns": {
             "type": "str",
-            "default": ""
         },
         "secondary_dns": {
             "type": "str",
-            "default": ""
         },
     }
     mutual_chap_spec = {
@@ -292,12 +275,10 @@ def main():
         },
         "password": {
             "type": "str",
-            "default": "",
             "no_log": True
         },
         "user_id": {
             "type": "str",
-            "default": ""
         },
     }
     argument_spec = intersight_argument_spec
@@ -309,7 +290,6 @@ def main():
         tags={"type": "list", "elements": "dict"},
         auto_targetvendor_name={
             "type": "str",
-            "default": ""
         },
         chap={
             "type": "list",
@@ -327,7 +307,6 @@ def main():
         },
         initiator_static_ip_v4_address={
             "type": "str",
-            "default": ""
         },
         initiator_static_ip_v4_config={
             "type": "list",
@@ -349,25 +328,27 @@ def main():
         },
         initiator_ip_pool={
             "type": "str",
-            "default": ""
         },
         iscsi_adapter_policy={
             "type": "str",
-            "default": ""
         },
         primary_target_policy={
             "type": "str",
-            "default": ""
         },
         secondary_target_policy={
             "type": "str",
-            "default": ""
         },
     )
 
     module = AnsibleModule(
         argument_spec,
         supports_check_mode=True,
+        required_if=[
+            ('target_source_type', 'Auto', ('auto_targetvendor_name', )),
+            ('target_source_type', 'Static', ('initiator_ip_source', 'primary_target_policy', )),
+            ('initiator_ip_source', 'Pool', ('initiator_ip_pool',)),
+            ('initiator_ip_source', 'Static', ('initiator_static_ip_v4_address', 'initiator_static_ip_v4_config')),
+        ]
     )
 
     intersight = IntersightModule(module)

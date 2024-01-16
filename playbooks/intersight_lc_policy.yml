@@ -30,6 +30,7 @@
           - Key: Site
             Value: RCDN
         target_platform: FIAttached
+        #iqn_allocation_type: None
         iqn_allocation_type: Pool
         iqn_pool: TEST_IQN_POOL
         azure_qos_enabled: true

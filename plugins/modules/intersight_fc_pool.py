@@ -51,7 +51,6 @@ options:
       - Description can contain letters(a-z, A-Z), numbers(0-9), hyphen(-), period(.), colon(:), or an underscore(_).
     aliases: [descr]
     type: str
-    default: ''
   id_blocks:
     description:
       -  Collection of WWN blocks.
@@ -64,17 +63,14 @@ options:
           - 'to 20:FF:FF:FF:FF:FF:FF:FF or from 50:00:00:00:00:00:00:00 to 5F:FF:FF:FF:FF:FF:FF:FF. To ensure uniqueness of WWNs in the SAN fabric,'
           - 'you are strongly encouraged to use the following WWN prefix; 20:00:00:25:B5:xx:xx:xx.'
         type: str
-        default: ""
       to:
         description:
           - 'Ending WWN identifier of the block must be in hexadecimal format xx:xx:xx:xx:xx:xx:xx:xx.'
         type: str
-        default: ""
   pool_purpose:
     description:
       -  Purpose of this WWN pool.
     type: str
-    default: ""
 author:
   - Surendra Ramarao (@CRSurendra)
 '''
@@ -134,13 +130,15 @@ def check_and_add_prop_dict_array(prop, prop_key, params, api_body):
             for item in params[prop_key]:
                 item_dict = {}
                 for key in item.keys():
-                    item_dict[to_camel_case(key)] = item[key]
+                    if item[key]:
+                        item_dict[to_camel_case(key)] = item[key]
                 api_body[prop].append(item_dict)
 
 
 def check_and_add_prop(prop, prop_key, params, api_body):
     if prop_key in params.keys():
-        api_body[prop] = params[prop_key]
+        if params[prop_key]:
+            api_body[prop] = params[prop_key]
 
 
 def to_camel_case(snake_str):
@@ -151,11 +149,9 @@ def main():
     id_blocks_spec = {
         "from": {
             "type": "str",
-            "default": ""
         },
         "to": {
             "type": "str",
-            "default": ""
         },
     }
     argument_spec = intersight_argument_spec
@@ -163,7 +159,7 @@ def main():
         state={"type": "str", "choices": ['present', 'absent'], "default": "present"},
         organization={"type": "str", "default": "default"},
         name={"type": "str", "required": True},
-        description={"type": "str", "aliases": ['descr'], "default": ""},
+        description={"type": "str", "aliases": ['descr']},
         tags={"type": "list", "default": [], "elements": "dict"},
         id_blocks={
             "type": "list",
@@ -172,7 +168,6 @@ def main():
         },
         pool_purpose={
             "type": "str",
-            "default": ""
         },
     )
 

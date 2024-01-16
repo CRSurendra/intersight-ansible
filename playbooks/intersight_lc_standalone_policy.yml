@@ -30,8 +30,7 @@
           - Key: Site
             Value: RCDN
         target_platform: Standalone
-        azure_qos_enabled: true
-        placement_mode: auto
+ 
 
 
         

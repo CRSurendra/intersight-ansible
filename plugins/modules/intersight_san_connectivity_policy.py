@@ -64,7 +64,6 @@ options:
       - Allowed ranges are '20:00:00:00:00:00:00:00' to '20:FF:FF:FF:FF:FF:FF:FF' or from '50:00:00:00:00:00:00:00' to '5F:FF:FF:FF:FF:FF:FF:FF'.
       - To ensure uniqueness of WWN's in the SAN fabric, you are strongly encouraged to use the WWN prefix - '20:00:00:25:B5:xx:xx:xx'.
     type: str
-    default: ''
   target_platform:
     description:
       -  The platform for which the server profile is applicable. It can either be a server that is operating in standalone mode or
@@ -86,7 +85,6 @@ options:
     description:
       - A reference to a fcpoolPool resource
     type: str
-    default: ''
 
 author:
   - Surendra Ramarao (@CRSurendra)
@@ -137,15 +135,17 @@ from ansible.module_utils.basic import AnsibleModule
 from ansible_collections.cisco.intersight.plugins.module_utils.intersight import IntersightModule, intersight_argument_spec
 
 
-def check_and_add_prop(prop, propKey, params, api_body):
-    if propKey in params.keys():
-        api_body[prop] = params[propKey]
+def check_and_add_prop(prop, prop_key, params, api_body):
+    if prop_key in params.keys():
+        if params[prop_key]:
+            api_body[prop] = params[prop_key]
 
 
 def check_and_add_prop_policy(prop, prop_key, params, api_body):
     api_body[prop] = {}
     for key in params.keys():
-        api_body[prop][key] = params[key]
+        if params[key]:
+            api_body[prop][key] = params[key]
 
 
 def get_policy_ref(intersight, policy_name, resource_path):
@@ -180,7 +180,6 @@ def main():
         ),
         static_wwnn_address=dict(
             type='str',
-            default=''
         ),
         target_platform=dict(
             type='str',
@@ -200,13 +199,17 @@ def main():
         ),
         wwnn_pool=dict(
             type='str',
-            default=''
         ),
     )
 
     module = AnsibleModule(
         argument_spec,
         supports_check_mode=True,
+        required_if=[
+            ('target_platform', 'FIAttached', ('placement_mode', 'wwnn_address_type',)),
+            ('wwnn_address_type', 'POOL', ('wwnn_pool',)),
+            ('wwnn_address_type', 'STATIC', ('static_wwnn_address',)),
+        ]
     )
 
     intersight = IntersightModule(module)

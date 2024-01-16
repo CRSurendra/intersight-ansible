@@ -51,7 +51,6 @@ options:
       - Description can contain letters(a-z, A-Z), numbers(0-9), hyphen(-), period(.), colon(:), or an underscore(_).
     aliases: [descr]
     type: str
-    default: ''
   mac_blocks:
     description:
       -  Collection of MAC blocks.
@@ -63,12 +62,10 @@ options:
           - 'Starting address of the block must be in hexadecimal format xx:xx:xx:xx:xx:xx. To ensure uniqueness of MACs in the LAN fabric, you are strongly'
           - 'encouraged to use the following MAC prefix 00:25:B5:xx:xx:xx.'
         type: str
-        default: ''
       to:
         description:
           - 'Ending address of the block must be in hexadecimal format xx:xx:xx:xx:xx:xx.'
         type: str
-        default: ''
 author:
   - Surendra Ramarao (@CRSurendra)
 '''
@@ -127,7 +124,8 @@ def check_and_add_prop_dict_array(prop, prop_key, params, api_body):
             for item in params[prop_key]:
                 item_dict = {}
                 for key in item.keys():
-                    item_dict[to_camel_case(key)] = item[key]
+                    if item[key]:
+                        item_dict[to_camel_case(key)] = item[key]
                 api_body[prop].append(item_dict)
 
 
@@ -139,11 +137,9 @@ def main():
     mac_blocks_spec = {
         "from": {
             "type": "str",
-            "default": ""
         },
         "to": {
             "type": "str",
-            "default": ""
         },
     }
     argument_spec = intersight_argument_spec
@@ -151,7 +147,7 @@ def main():
         state={"type": "str", "choices": ['present', 'absent'], "default": "present"},
         organization={"type": "str", "default": "default"},
         name={"type": "str", "required": True},
-        description={"type": "str", "aliases": ['descr'], "default": ""},
+        description={"type": "str", "aliases": ['descr']},
         tags={"type": "list", "default": [], "elements": "dict"},
         mac_blocks={
             "type": "list",

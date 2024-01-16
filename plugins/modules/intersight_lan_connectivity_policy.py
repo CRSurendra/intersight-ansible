@@ -69,7 +69,6 @@ options:
     description:
       -  User provided static iSCSI Qualified Name (IQN) for use as initiator identifiers by iSCSI vNICs in a Fabric Interconnect domain.
     type: str
-    default: ''
   placement_mode:
     description:
       -  The mode used for placement of vNICs on network adapters. It can either be Auto or Custom.
@@ -91,7 +90,6 @@ options:
     description:
       -  A reference to a iqnpoolPool resource.
     type: str
-    default: ''
 author:
   - Surendra Ramarao (@CRSurendra)
 '''
@@ -141,15 +139,17 @@ from ansible.module_utils.basic import AnsibleModule
 from ansible_collections.cisco.intersight.plugins.module_utils.intersight import IntersightModule, intersight_argument_spec
 
 
-def check_and_add_prop(prop, propKey, params, api_body):
-    if propKey in params.keys():
-        api_body[prop] = params[propKey]
+def check_and_add_prop(prop, prop_key, params, api_body):
+    if prop_key in params.keys():
+        if params[prop_key]:
+            api_body[prop] = params[prop_key]
 
 
 def check_and_add_prop_policy(prop, prop_key, params, api_body):
     api_body[prop] = {}
     for key in params.keys():
-        api_body[prop][key] = params[key]
+        if params[key]:
+            api_body[prop][key] = params[key]
 
 
 def get_policy_ref(intersight, policy_name, resource_path):
@@ -186,6 +186,7 @@ def main():
                  'Pool'
             ],
             default='None'
+
         ),
         placement_mode=dict(
             type='str',
@@ -196,8 +197,7 @@ def main():
             default='custom'
         ),
         static_iqn_name=dict(
-            type='str',
-            default=''
+            type='str'
         ),
         target_platform=dict(
             type='str',
@@ -208,14 +208,18 @@ def main():
             default='Standalone'
         ),
         iqn_pool=dict(
-            type='str',
-            default=''
+            type='str'
         ),
     )
 
     module = AnsibleModule(
         argument_spec,
         supports_check_mode=True,
+        required_if=[
+            ('target_platform', 'FIAttached', ('azure_qos_enabled', 'iqn_allocation_type', 'placement_mode')),
+            ('iqn_allocation_type', 'Pool', ('iqn_pool',)),
+            ('iqn_allocation_type', 'Static', ('static_iqn_name',)),
+        ]
     )
 
     intersight = IntersightModule(module)

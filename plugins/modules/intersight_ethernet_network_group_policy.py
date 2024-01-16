@@ -124,7 +124,8 @@ def check_and_add_prop_dict(prop, prop_key, params, api_body):
         if params[prop_key] :
             for item in params[prop_key]:
                 for key in item.keys():
-                    api_body[prop][to_camel_case(key)] = item[key]
+                    if item[key]:
+                        api_body[prop][to_camel_case(key)] = item[key]
 
 
 def to_camel_case(snake_str):

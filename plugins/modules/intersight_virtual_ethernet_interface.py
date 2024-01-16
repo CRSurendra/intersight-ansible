@@ -56,7 +56,6 @@ options:
         description:
           - The CDN value entered in case of user defined mode.
         type: str
-        default: ''
   failover_enabled:
     description:
       - Enabling failover ensures that traffic from the vNIC automatically fails over to the secondary
@@ -86,7 +85,6 @@ options:
       - Pingroup name associated to vNIC for static pinning. LCP deploy will resolve pingroup name and fetches
       - the correspoding uplink port/port channel to pin the vNIC traffic.
     type: str
-    default: ''
   placement:
     description:
       -  placement Settings for the virtual interface.
@@ -110,7 +108,6 @@ options:
         description:
           - PCIe Slot where the VIC adapter is installed. Supported values are (1-15) and MLOM.
         type: str
-        default: ''
       pci_link:
         description:
           - The PCI Link used as transport for the virtual interface. PCI Link is only applicable for select
@@ -148,7 +145,6 @@ options:
       - To ensure uniqueness of MACs in the LAN fabric, you are strongly encouraged to use the
       - 'following MAC prefix 00:25:B5:xx:xx:xx.'
     type: str
-    default: ''
   eth_adapter_policy:
     description:
       -  A reference to a vniceth_adapter_policy resource.
@@ -210,9 +206,8 @@ EXAMPLES = r'''
     eth_network_policy: TEST_ENP
     eth_qos_policy: TEST_QOS
     lan_connectivity_policy: TEST_LCP
-  
 
-- name: Delete Virtual Ethernet Interface 
+- name: Delete Virtual Ethernet Interface
   cisco.intersight.intersight_virtual_ethernent_interface:
     api_private_key: "{{ api_private_key }}"
     api_key_id: "{{ api_key_id }}"
@@ -246,7 +241,8 @@ from ansible_collections.cisco.intersight.plugins.module_utils.intersight import
 
 def check_and_add_prop(prop, prop_key, params, api_body):
     if prop_key in params.keys():
-        api_body[prop] = params[prop_key]
+        if params[prop_key]:
+            api_body[prop] = params[prop_key]
 
 
 def check_and_add_prop_dict(prop, prop_key, params, api_body):
@@ -255,13 +251,16 @@ def check_and_add_prop_dict(prop, prop_key, params, api_body):
         if params[prop_key] :
             for item in params[prop_key]:
                 for key in item.keys():
-                    api_body[prop][to_camel_case(key)] = item[key]
+                    if item[key]:
+                        api_body[prop][to_camel_case(key)] = item[key]
 
 
 def check_and_add_prop_policy(prop, prop_key, params, api_body):
     api_body[prop] = {}
     for key in params.keys():
-        api_body[prop][key] = params[key]
+        if params[key]:
+            api_body[prop][key] = params[key]
+
 
 def check_and_add_prop_policies(prop, prop_key, params, api_body):
     api_body[prop] = []
@@ -286,31 +285,33 @@ def get_policy_ref(intersight, policy_name, resource_path):
     intersight.result['trace_id'] = ''
     return {"Moid": moid}
 
+
 def get_policies_ref(intersight, policy_names, resource_path):
     results = []
     for policy_name in policy_names:
-      intersight.result['api_response'] = {}
-      intersight.result['trace_id'] = ''
-      moid = None
-      query = str.format("Name eq '{policy}'", policy=policy_name)
-      intersight.get_resource(resource_path=resource_path, query_params={"$filter": query})
-      if intersight.result['api_response'].get('Moid'):
-          # resource exists and moid was returned
-          moid = intersight.result['api_response']['Moid']
-      intersight.result['api_response'] = {}
-      intersight.result['trace_id'] = ''
-      results.append( {"Moid": moid})
+        intersight.result['api_response'] = {}
+        intersight.result['trace_id'] = ''
+        moid = None
+        query = str.format("Name eq '{policy}'", policy=policy_name)
+        intersight.get_resource(resource_path=resource_path, query_params={"$filter": query})
+        if intersight.result['api_response'].get('Moid'):
+            # resource exists and moid was returned
+            moid = intersight.result['api_response']['Moid']
+        intersight.result['api_response'] = {}
+        intersight.result['trace_id'] = ''
+        results.append({"Moid": moid})
     return results
+
 
 def main():
     cdn_settings_spec = {
         "source" : {"type": "str", "choices": ['vnic', 'user'], "default": 'vnic'},
-        "value" : {"type": "str", "default": ''}
+        "value" : {"type": "str"}
     }
     placement_settings_spec = {
         "auto_pci_link" : {"type": "bool", "default": "False"},
         "auto_slot_id" : {"type": "bool", "default": "False"},
-        "id" : {"type": "str", "default": ''},
+        "id" : {"type": "str"},
         "pci_link" : {"type": "int", "default": 0},
         "pci_link_assignment_mode" : {"type": "str", "choices": ['Custom', 'Load-Balanced', 'None'], "default": 'Custom'},
         "switch_id" : {"type": "str", "choices": ['None', 'A', 'B'], "default": 'None'},
@@ -341,7 +342,6 @@ def main():
         },
         pin_group_name={
             "type": "str",
-            "default": ''
         },
         placement={
             "type": "list",
@@ -350,7 +350,6 @@ def main():
         },
         static_mac_address={
             "type": "str",
-            "default": ''
         },
         eth_adapter_policy={
             "type": "str"
@@ -370,7 +369,6 @@ def main():
         },
         iscsi_boot_policy=dict(
             type='str',
-            default=''
         ),
         lan_connectivity_policy={
             "type": "str",
@@ -384,6 +382,10 @@ def main():
     module = AnsibleModule(
         argument_spec,
         supports_check_mode=True,
+        required_if=[
+            ('mac_address_type', 'POOL', ('mac_pool', )),
+            ('mac_address_type', 'STATIC', ('static_mac_address',)),
+        ]
     )
 
     intersight = IntersightModule(module)
@@ -395,8 +397,10 @@ def main():
     eth_qos_policy = get_policy_ref(intersight, intersight.module.params['eth_qos_policy'], '/vnic/EthQosPolicies')
     lan_connectivity_policy = get_policy_ref(intersight, intersight.module.params['lan_connectivity_policy'], '/vnic/LanConnectivityPolicies')
     mac_pool = get_policy_ref(intersight, intersight.module.params['mac_pool'], '/macpool/Pools')
-    fabric_eth_network_control_policy = get_policy_ref(intersight, intersight.module.params['fabric_eth_network_control_policy'], '/fabric/EthNetworkControlPolicies')
-    fabric_eth_network_group_policies = get_policies_ref(intersight, intersight.module.params['fabric_eth_network_group_policy'], '/fabric/EthNetworkGroupPolicies')
+    fabric_eth_network_control_policy = get_policy_ref(intersight, intersight.module.params['fabric_eth_network_control_policy'],
+                                                       '/fabric/EthNetworkControlPolicies')
+    fabric_eth_network_group_policies = get_policies_ref(intersight, intersight.module.params['fabric_eth_network_group_policy'],
+                                                         '/fabric/EthNetworkGroupPolicies')
     iscsi_boot_policy = get_policy_ref(intersight, intersight.module.params['iscsi_boot_policy'], '/vnic/IscsiBootPolicies')
 
     #
