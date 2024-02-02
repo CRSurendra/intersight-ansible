@@ -148,6 +148,30 @@ api_repsonse:
 from ansible.module_utils.basic import AnsibleModule
 from ansible_collections.cisco.intersight.plugins.module_utils.intersight import IntersightModule, intersight_argument_spec
 
+argument_spec = intersight_argument_spec
+argument_spec.update(
+    state=dict(type='str', choices=['present', 'absent'], default='present'),
+    organization=dict(type='str', default='default'),
+    name=dict(type='str', required=True),
+    target_platform=dict(type='str', choices=['Standalone', 'FIAttached'], default='Standalone'),
+    tags=dict(type='list', elements='dict'),
+    description=dict(type='str', aliases=['descr']),
+    adapter_config_policy=dict(type='str'),
+    boot_order_policy=dict(type='str'),
+    imc_access_policy=dict(type='str'),
+    lan_connectivity_policy=dict(type='str'),
+    local_user_policy=dict(type='str'),
+    ntp_policy=dict(type='str'),
+    storage_policy=dict(type='str'),
+    virtual_media_policy=dict(type='str'),
+)
+
+def setup_module_object():
+    module = AnsibleModule(
+        argument_spec,
+        supports_check_mode=True,
+    )
+    return module
 
 def post_profile_template_to_policy(intersight, moid, resource_path, policy_name):
     options = {
@@ -200,32 +224,7 @@ def post_profile_template_to_policy(intersight, moid, resource_path, policy_name
                 intersight.call_api(**options)
             intersight.result['changed'] = True
 
-
-def main():
-    argument_spec = intersight_argument_spec
-    argument_spec.update(
-        state=dict(type='str', choices=['present', 'absent'], default='present'),
-        organization=dict(type='str', default='default'),
-        name=dict(type='str', required=True),
-        target_platform=dict(type='str', choices=['Standalone', 'FIAttached'], default='Standalone'),
-        tags=dict(type='list', elements='dict'),
-        description=dict(type='str', aliases=['descr']),
-        adapter_config_policy=dict(type='str'),
-        boot_order_policy=dict(type='str'),
-        imc_access_policy=dict(type='str'),
-        lan_connectivity_policy=dict(type='str'),
-        local_user_policy=dict(type='str'),
-        ntp_policy=dict(type='str'),
-        storage_policy=dict(type='str'),
-        virtual_media_policy=dict(type='str'),
-    )
-
-    module = AnsibleModule(
-        argument_spec,
-        supports_check_mode=True,
-    )
-
-    intersight = IntersightModule(module)
+def create_server_profile_template(intersight):
     intersight.result['api_response'] = {}
     intersight.result['trace_id'] = ''
     #
@@ -273,6 +272,10 @@ def main():
     if moid and intersight.module.params['virtual_media_policy']:
         post_profile_template_to_policy(intersight, moid, resource_path='/vmedia/Policies', policy_name=intersight.module.params['virtual_media_policy'])
 
+def main():
+    module = setup_module_object()
+    intersight = IntersightModule(module)
+    create_server_profile_template(intersight)
     module.exit_json(**intersight.result)
 
 
