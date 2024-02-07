@@ -60,6 +60,7 @@ options:
   adapter_config_policy:
     description:
       - Name of the Adapter Configuration Policy to be associated with this profile
+    type: str
   boot_order_policy:
     description:
       - Name of Boot Order Policy to associate with this profile template.
@@ -220,7 +221,7 @@ def main():
         storage_policy=dict(type='str'),
         virtual_media_policy=dict(type='str'),
     )
-    
+
     module = AnsibleModule(
         argument_spec,
         supports_check_mode=True,
@@ -243,7 +244,7 @@ def main():
         'Description': intersight.module.params['description'],
     }
     intersight.result['api_response'] = {}
-    
+
     if intersight.module.params['target_platform'] == 'FIAttached':
         intersight.api_body['TargetPlatform'] = intersight.module.params['target_platform']
 
@@ -251,28 +252,36 @@ def main():
     moid = intersight.configure_policy_or_profile(resource_path=resource_path)
 
     if moid and intersight.module.params['adapter_config_policy']:
-        post_profile_template_to_policy(intersight, moid, resource_path='/adapter/ConfigPolicies', policy_name=intersight.module.params['adapter_config_policy'])
+        post_profile_template_to_policy(intersight, moid, resource_path='/adapter/ConfigPolicies',
+                                        policy_name=intersight.module.params['adapter_config_policy'])
 
     if moid and intersight.module.params['boot_order_policy']:
-        post_profile_template_to_policy(intersight, moid, resource_path='/boot/PrecisionPolicies', policy_name=intersight.module.params['boot_order_policy'])
+        post_profile_template_to_policy(intersight, moid, resource_path='/boot/PrecisionPolicies',
+                                        policy_name=intersight.module.params['boot_order_policy'])
 
     if moid and intersight.module.params['imc_access_policy']:
-        post_profile_template_to_policy(intersight, moid, resource_path='/access/Policies', policy_name=intersight.module.params['imc_access_policy'])
+        post_profile_template_to_policy(intersight, moid, resource_path='/access/Policies',
+                                        policy_name=intersight.module.params['imc_access_policy'])
 
     if moid and intersight.module.params['lan_connectivity_policy']:
-        post_profile_template_to_policy(intersight, moid, resource_path='/vnic/LanConnectivityPolicies', policy_name=intersight.module.params['lan_connectivity_policy'])
+        post_profile_template_to_policy(intersight, moid, resource_path='/vnic/LanConnectivityPolicies',
+                                        policy_name=intersight.module.params['lan_connectivity_policy'])
 
     if moid and intersight.module.params['local_user_policy']:
-        post_profile_template_to_policy(intersight, moid, resource_path='/iam/EndPointUserPolicies', policy_name=intersight.module.params['local_user_policy'])
+        post_profile_template_to_policy(intersight, moid, resource_path='/iam/EndPointUserPolicies',
+                                        policy_name=intersight.module.params['local_user_policy'])
 
     if moid and intersight.module.params['ntp_policy']:
-        post_profile_template_to_policy(intersight, moid, resource_path='/ntp/Policies', policy_name=intersight.module.params['ntp_policy'])
+        post_profile_template_to_policy(intersight, moid, resource_path='/ntp/Policies',
+                                        policy_name=intersight.module.params['ntp_policy'])
 
     if moid and intersight.module.params['storage_policy']:
-        post_profile_template_to_policy(intersight, moid, resource_path='/storage/StoragePolicies', policy_name=intersight.module.params['storage_policy'])
+        post_profile_template_to_policy(intersight, moid, resource_path='/storage/StoragePolicies',
+                                        policy_name=intersight.module.params['storage_policy'])
 
     if moid and intersight.module.params['virtual_media_policy']:
-        post_profile_template_to_policy(intersight, moid, resource_path='/vmedia/Policies', policy_name=intersight.module.params['virtual_media_policy'])
+        post_profile_template_to_policy(intersight, moid, resource_path='/vmedia/Policies',
+                                        policy_name=intersight.module.params['virtual_media_policy'])
 
     module.exit_json(**intersight.result)
 
