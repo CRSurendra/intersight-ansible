@@ -1,0 +1,157 @@
+---
+# Example Playbook: cisco.intersight.intersight_fabric_port_policy
+# Runs on localhost since policies are only configured once
+# Author: Surendra Ramarao (@CRSurendra)
+- hosts: localhost
+  connection: local
+  collections:
+    - cisco.intersight
+  gather_facts: false
+  vars:
+    # Create an anchor for api_info that can be used throughout the file
+    api_info: &api_info
+      # if api_key vars are omitted, INTERSIGHT_API_KEY_ID, INTERSIGHT_API_PRIVATE_KEY,
+      # and INTERSIGHT_API_URI environment variables used for API key data
+      api_private_key: "{{ api_private_key | default(omit) }}"
+      api_key_id: "{{ api_key_id | default(omit) }}"
+      api_uri: "{{ api_uri | default(omit) }}"
+      validate_certs: "{{ validate_certs | default(omit) }}"
+      state: "{{ state | default('present') }}"
+    # Organization name
+    org_name: Cloudera-SZR-Org
+  tasks:
+    - name: Configure Fabric Port Policy
+      intersight_fabric_port_policy:
+        <<: *api_info
+        organization: "{{ org_name }}"
+        name: TEST_FPP
+        description: Port Policy for RCDN
+        tags:
+          - Key: Site
+            Value: RCDN
+        device_model: UCS-FI-6454
+        port_modes:
+          - custom_mode: FibreChannel
+            port_id_start: 1
+            port_id_end: 8
+            slot_id: 1
+          - custom_mode: BreakoutEthernet10G
+            port_id_start: 49
+            port_id_end: 50
+            slot_id: 1
+        port_roles:
+          - port_role: Server
+            port_id_start: 21
+            port_id_end: 22
+            slot_id: 1
+            server_spec:
+              fec: Auto
+              auto_negotiation_disabled: True
+          - port_role: Appliance
+            port_id_start: 17
+            port_id_end: 20
+            slot_id: 1
+            appliance_spec:
+              mode: trunk
+              priority: Gold
+              eth_network_control_policy: TEST_ENCP
+              eth_network_group_policy: TEST_ENGP
+              fec: Auto
+              admin_speed: 10Gbps
+          - port_role: FcStorage
+            port_id_start: 1
+            port_id_end: 2
+            slot_id: 1
+            fc_storage_spec:
+              admin_speed: 16Gbps
+              vsan_id: 200
+          - port_role: FcUplink
+            port_id_start: 3
+            port_id_end: 4
+            slot_id: 1
+            fc_uplink_spec:
+              admin_speed: 32Gbps
+              vsan_id: 200
+          - port_role: FcoeUplink
+            port_id_start: 23
+            port_id_end: 24
+            slot_id: 1
+            fcoe_uplink_spec:
+              admin_speed: 10Gbps
+              fec: Auto
+              link_control_policy: TEST_LNKCP
+          - port_role: EthernetUplink
+            port_id_start: 25
+            port_id_end: 28
+            slot_id: 1
+            eth_uplink_spec:
+              admin_speed: 10Gbps
+              fec: Auto
+              link_control_policy: TEST_LNKCP
+              flow_control_policy: TEST_FCP
+              eth_network_group_policy: TEST_ENGP
+          - port_role: EthernetUplink
+            aggregate_port_id: 49
+            port_id_start: 1
+            port_id_end: 2
+            slot_id: 1
+            eth_uplink_spec:
+              admin_speed: Auto
+              fec: Auto
+              link_control_policy: TEST_LNKCP
+              flow_control_policy: TEST_FCP
+              eth_network_group_policy: TEST_ENGP
+        port_channels:
+          - pc_id: 1
+            port_id_start: 9
+            port_id_end: 12
+            slot_id: 1
+            port_channel_role_type: Appliance
+            appliance_pc_spec:
+              mode: trunk
+              priority: Gold
+              admin_speed: 10Gbps
+              link_aggregation_policy: TEST_LAP
+              eth_network_control_policy: TEST_ENCP
+              eth_network_group_policy: TEST_ENGP
+          - pc_id: 2
+            port_id_start: 5
+            port_id_end: 6
+            slot_id: 1
+            port_channel_role_type: FcUplink
+            fc_uplink_pc_spec:
+              admin_speed: 32Gbps
+              vsan_id: 200
+          - pc_id: 3
+            port_id_start: 13
+            port_id_end: 14
+            slot_id: 1
+            port_channel_role_type: FcoeUplink
+            fcoe_uplink_pc_spec:
+              admin_speed: 10Gbps
+              link_control_policy: TEST_LNKCP
+              link_aggregation_policy: TEST_LAP
+          - pc_id: 4
+            port_id_start: 15
+            port_id_end: 16
+            slot_id: 1
+            port_channel_role_type: EthernetUplink
+            eth_uplink_pc_spec:
+              admin_speed: 10Gbps
+              link_control_policy: TEST_LNKCP
+              link_aggregation_policy: TEST_LAP
+              flow_control_policy: TEST_FCP
+              eth_network_group_policy: TEST_ENGP
+
+         # state: absent
+            
+
+            
+
+        
+        
+
+
+        
+
+        
