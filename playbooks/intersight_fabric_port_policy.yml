@@ -142,8 +142,47 @@
               link_aggregation_policy: TEST_LAP
               flow_control_policy: TEST_FCP
               eth_network_group_policy: TEST_ENGP
-
-         # state: absent
+        pin_groups:
+          - name: TEST_PG1
+            type: LAN 
+            pin_target_interface_type: Port 
+            port_spec:
+              port_id: 26
+              slot_id: 1
+              port_role: EthernetUplink
+          - name: TEST_PG2
+            type: LAN 
+            pin_target_interface_type: PortChannel
+            port_channel_spec:
+              pc_id: 4
+              pc_role: EthernetUplink
+          - name: TEST_PG3
+            type: SAN 
+            pin_target_interface_type: Port 
+            port_spec:
+              port_id: 3
+              slot_id: 1
+              port_role: FcUplink
+          - name: TEST_PG4
+            type: SAN 
+            pin_target_interface_type: PortChannel
+            port_channel_spec:
+              pc_id: 2
+              pc_role: FcUplink
+          - name: TEST_PG5
+            type: SAN 
+            pin_target_interface_type: Port 
+            port_spec:
+              port_id: 23
+              slot_id: 1
+              port_role: FcoeUplink
+          - name: TEST_PG6
+            type: SAN 
+            pin_target_interface_type: PortChannel
+            port_channel_spec:
+              pc_id: 3
+              pc_role: FcoeUplink
+        state: absent
             
 
             

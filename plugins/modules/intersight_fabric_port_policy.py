@@ -74,7 +74,8 @@ options:
           -  BreakoutFibreChannel8G - Breakout FibreChannel 8G Port Type.
           -  BreakoutFibreChannel16G - Breakout FibreChannel 16G Port Type.
           -  BreakoutFibreChannel32G - Breakout FibreChannel 32G Port Type.
-        choices: ['FibreChannel' , 'BreakoutEthernet10G' , 'BreakoutEthernet25G' , 'BreakoutFibreChannel8G' , 'BreakoutFibreChannel16G' , 'BreakoutFibreChannel32G']
+        choices: ['FibreChannel' , 'BreakoutEthernet10G' , 'BreakoutEthernet25G' , 'BreakoutFibreChannel8G' , 'BreakoutFibreChannel16G',
+                  'BreakoutFibreChannel32G']
         default: FibreChannel
         type: str
       port_id_end:
@@ -95,7 +96,7 @@ options:
     elements: dict
     suboptions:
       port_role:
-        description: 
+        description:
           -  The role of the port.
           -  Appliance - Appliance Role
           -  EthernetUplink - Ethernet Uplink Role
@@ -151,10 +152,12 @@ options:
             description:
               -  A reference to a fabriceth_network_control_policy resource.
               - When the $expand query parameter is specified, the referenced resource is returned inline.
+            type: str
           eth_network_group_policy:
             description:
               -  A reference to a fabriceth_network_group_policy resource.
               - When the $expand query parameter is specified, the referenced resource is returned inline.
+            type: str
           admin_speed:
             description:
               -  Admin configured speed for the port.
@@ -417,7 +420,7 @@ options:
               -  A reference to a fabriclink_aggregation_policy resource.
             type: str
       eth_uplink_pc_spec:
-        description: Ethernet Uplink port channel role specification 
+        description: Ethernet Uplink port channel role specification
         type: dict
         suboptions:
           admin_speed:
@@ -448,6 +451,51 @@ options:
             description:
               -  A reference to a fabriclink_aggregation_policy resource.
             type: str
+  pin_groups:
+    description: pin groups configuration for the switch
+    type: list
+    elements: dict
+    suboptions:
+      name:
+        description: The name of the pin group.
+        type: str
+      type:
+        description: The type of the pin group.
+        type: str
+        choices: ['LAN', 'SAN']
+      pin_target_interface_type:
+        description: The type of the pin target interface.
+        type: str
+        choices: ['Port', 'PortChannel']
+      port_spec:
+        description: The port specification for the target port.
+        type: dict
+        suboptions:
+          port_id:
+            description: The end port identifier.
+            type: int
+          slot_id:
+            description: The slot identifier.
+            type: int
+          aggregate_port_id:
+            description: The aggregate port identifier.
+            type: int
+            default: 0
+          port_role:
+            description: The role of the port.
+            type: str
+            choices: ['EthernetUplink', 'FcUplink', 'FcoeUplink']
+      port_channel_spec:
+        description: The port channel specification for the target port.
+        type: dict
+        suboptions:
+          pc_id:
+            description: The port channel identifier.
+            type: int
+          pc_role:
+            description: The role of the port channel.
+            type: str
+            choices: ['EthernetUplink', 'FcUplink', 'FcoeUplink']
 author:
   - Surendra Ramarao (@CRSurendra)
 '''
@@ -492,13 +540,23 @@ EXAMPLES = r'''
         slot_id: 1
         aggregate_port_id: 0
         appliance_pc_spec:
-          mode: trunk 
+          mode: trunk
           admin_speed: Auto
           priority: Best Effort
           eth_network_control_policy: COS-ENC
           eth_network_group_policy: COS-ENG
           link_aggregation_policy: COS-LAP
-          
+    pin_groups:
+      - name: MY-PIN-GROUP1
+        type: LAN
+        pin_target_interface_type: Port
+        port_spec:
+          port_id: 1
+          slot_id: 1
+          aggregate_port_id: 0
+          port_role: EthernetUplink
+
+
 - name: Delete Fabric Port Policy
   cisco.intersight.intersight_fabric_port_policy:
     api_private_key: "{{ api_private_key }}"
@@ -528,20 +586,25 @@ api_repsonse:
 
 
 from ansible.module_utils.basic import AnsibleModule
-from ansible_collections.cisco.intersight.plugins.module_utils.intersight import IntersightModule, intersight_argument_spec, compare_values
+from ansible_collections.cisco.intersight.plugins.module_utils.intersight import IntersightModule, intersight_argument_spec
 
 
+# checks if the property is present in the params and adds it to the api_body
 def check_and_add_prop(prop, prop_key, params, api_body):
     if prop_key in params.keys():
         if params[prop_key]:
             api_body[prop] = params[prop_key]
 
+
+# checks if the policy moid is present in the params and adds it to the api_body
 def check_and_add_prop_policy(prop, prop_key, params, api_body):
     api_body[prop] = {}
     for key in params.keys():
         if params[key]:
             api_body[prop][key] = params[key]
 
+
+# checks if the property is present in the params and adds it to the api_body as an array
 def check_and_add_prop_policy_toarray(prop, prop_key, params, api_body):
     api_body[prop] = []
     item_dict = {}
@@ -550,18 +613,22 @@ def check_and_add_prop_policy_toarray(prop, prop_key, params, api_body):
             item_dict[key] = params[key]
     api_body[prop].append(item_dict)
 
+
 def main():
+
     port_modes_spec = dict(
         custom_mode={
-            "type": "str", 
+            "type": "str",
             "choices": [
-                'FibreChannel', 
-                'BreakoutEthernet10G', 
-                'BreakoutEthernet25G', 
-                'BreakoutFibreChannel8G', 
-                'BreakoutFibreChannel16G', 
-                'BreakoutFibreChannel32G'], 
-                "default": "FibreChannel"},
+                'FibreChannel',
+                'BreakoutEthernet10G',
+                'BreakoutEthernet25G',
+                'BreakoutFibreChannel8G',
+                'BreakoutFibreChannel16G',
+                'BreakoutFibreChannel32G'
+            ],
+            "default": "FibreChannel"
+        },
         port_id_end={"type": "int"},
         port_id_start={"type": "int"},
         slot_id={"type": "int"},
@@ -574,7 +641,6 @@ def main():
         fec={"type": "str", "choices": ['Auto', 'Cl91', 'Cl74'], "default": "Auto"},
         eth_network_control_policy={"type": "str"},
         eth_network_group_policy={"type": "str"},
-        
     )
 
     server_specification = dict(
@@ -659,7 +725,7 @@ def main():
         flow_control_policy={"type": "str"},
         link_control_policy={"type": "str"},
     )
-        
+
     port_roles_spec = dict(
         port_role={"type": "str", "choices": ['Appliance' , 'EthernetUplink', 'FcUplink', 'FcoeUplink', 'FcStorage', 'Server'], "required": True},
         port_id_end={"type": "int"},
@@ -701,7 +767,7 @@ def main():
         link_control_policy={"type": "str"},
         link_aggregation_policy={"type": "str"},
     )
-    
+
     port_channel_roles_spec = dict(
         port_channel_role_type={"type": "str", "choices": ['Appliance' , 'EthernetUplink', 'FcUplink', 'FcoeUplink'], "required": True},
         pc_id={"type": "int"},
@@ -713,6 +779,23 @@ def main():
         fc_uplink_pc_spec={"type": "dict", "options": fc_uplink_pc_specification},
         fcoe_uplink_pc_spec={"type": "dict", "options": fcoe_pc_specificaiton},
         eth_uplink_pc_spec={"type": "dict", "options": eth_pc_specification}
+    )
+
+    pin_groups_spec = dict(
+        name={"type": "str"},
+        type={"type": "str", "choices": ['LAN', 'SAN']},
+        pin_target_interface_type={"type": "str", "choices": ['Port', 'PortChannel']},
+        port_spec={"type": "dict", "options": {
+            "port_id": {"type": "int"},
+            "slot_id": {"type": "int"},
+            "aggregate_port_id": {"type": "int", "default": 0},
+            "port_role": {"type": "str", "choices": ['EthernetUplink', 'FcUplink', 'FcoeUplink']},
+        }},
+        port_channel_spec={"type": "dict", "options": {
+            "pc_id": {"type": "int"},
+            "pc_role": {"type": "str", "choices": ['EthernetUplink', 'FcUplink', 'FcoeUplink']},
+
+        }}
     )
 
     argument_spec = intersight_argument_spec
@@ -733,28 +816,39 @@ def main():
             "default": "UCS-FI-6454"
         },
         port_modes={"type": "list", "elements": "dict", "options": port_modes_spec},
-        port_roles=dict(type="list", 
-                        elements="dict", 
-                        options=port_roles_spec,
-                        required_if=[('port_role', 'Appliance',('appliance_spec',), False),
-                                    ('port_role', 'Server',('server_spec',), False),
-                                    ('port_role', 'FcStorage',('fc_storage_spec',), False),
-                                    ('port_role', 'FcUplink',('fc_uplink_spec',), False),
-                                    ('port_role', 'FcoeUplink',('fcoe_uplink_spec',), False),
-                                    ('port_role', 'EthernetUplink',('eth_uplink_spec',), False)
-                                    ]
+        port_roles=dict(
+            type="list",
+            elements="dict",
+            options=port_roles_spec,
+            required_if=[
+                ('port_role', 'Appliance', ('appliance_spec', ), False),
+                ('port_role', 'Server', ('server_spec', ), False),
+                ('port_role', 'FcStorage', ('fc_storage_spec', ), False),
+                ('port_role', 'FcUplink', ('fc_uplink_spec', ), False),
+                ('port_role', 'FcoeUplink', ('fcoe_uplink_spec', ), False),
+                ('port_role', 'EthernetUplink', ('eth_uplink_spec', ), False)
+            ]
         ),
-        port_channels={"type": "list", 
-                       "elements": "dict", 
-                       "options": port_channel_roles_spec,
-                        "required_if": [
-                            ('port_channel_role_type', 'Appliance',('appliance_pc_spec',), False),
-                            ('port_channel_role_type', 'FcUplink',('fc_uplink_pc_spec',), False),
-                            ('port_channel_role_type', 'FcoeUplink',('fcoe_uplink_pc_spec',), False),
-                            ('port_channel_role_type', 'EthernetUplink',('eth_uplink_pc_spec',), False)
-                        ]
-                       },
-        
+        port_channels={
+            "type": "list",
+            "elements": "dict",
+            "options": port_channel_roles_spec,
+            "required_if": [
+                ('port_channel_role_type', 'Appliance', ('appliance_pc_spec', ), False),
+                ('port_channel_role_type', 'FcUplink', ('fc_uplink_pc_spec', ), False),
+                ('port_channel_role_type', 'FcoeUplink', ('fcoe_uplink_pc_spec', ), False),
+                ('port_channel_role_type', 'EthernetUplink', ('eth_uplink_pc_spec', ), False)
+            ]
+        },
+        pin_groups={
+            "type": "list",
+            "elements": "dict",
+            "options": pin_groups_spec,
+            "required_if": [
+                ('pin_target_interface_type', 'Port', ('port_spec', ), False),
+                ('pin_target_interface_type', 'PortChannel', ('port_channel_spec', ), False)
+            ]
+        },
     )
 
     module = AnsibleModule(
@@ -780,20 +874,20 @@ def main():
         'Description': intersight.module.params['description'],
     }
     check_and_add_prop('DeviceModel', 'device_model', intersight.module.params, intersight.api_body)
-    
+
     # create/update Port Policy if state is present
     if intersight.module.params['state'] == 'present':
-      intersight.configure_policy_or_profile(resource_path=resource_path)
-      if intersight.result['api_response'].get('Moid'):
-        port_policy = { "Moid": intersight.result['api_response'].get('Moid')}
-      else:
-        module.fail_json(msg="Port Policy not found")
+        intersight.configure_policy_or_profile(resource_path=resource_path)
+        if intersight.result['api_response'].get('Moid'):
+            port_policy = {"Moid": intersight.result['api_response'].get('Moid')}
+        else:
+            module.fail_json(msg="Port Policy not found")
     elif intersight.module.params['state'] == 'absent':
-      # don't delete the port policy before deleting the port modes
-      port_policy = get_policy_ref(intersight, intersight.module.params['name'], resource_path)
-      if not port_policy['Moid']:
-          # policy does not exist
-          module.exit_json(**intersight.result)
+        # don't delete the port policy before deleting the other port configuraitons
+        port_policy = get_policy_ref(intersight, intersight.module.params['name'], resource_path)
+        if not port_policy['Moid']:
+            # policy does not exist
+            module.exit_json(**intersight.result)
     #
     # Configure Port Mode
     #
@@ -809,19 +903,131 @@ def main():
         port_channels = intersight.module.params['port_channels']
         if port_channels and intersight.module.params['state'] == 'present':
             configure_port_channels(module, intersight, port_policy, port_channels)
+    if 'pin_groups' in intersight.module.params:
+        pin_groups = intersight.module.params['pin_groups']
+        if pin_groups and intersight.module.params['state'] == 'present':
+            configure_pin_groups(module, intersight, port_policy, pin_groups)
 
     if intersight.module.params['state'] == 'absent':
-      # first delete port channels, port roles and then modes
-      if port_channels:
-          configure_port_channels(module, intersight, port_policy, port_channels)
-      if port_roles:
-          configure_port_roles(module, intersight, port_policy, port_roles)
-      if port_modes:
-          configure_port_modes(module, intersight, port_policy, port_modes)
-      # yes now is the time to delete the port policy
-      intersight.configure_policy_or_profile(resource_path=resource_path)
+        # first delete pin groups, port channels, port roles and then modes
+        if pin_groups:
+            configure_pin_groups(module, intersight, port_policy, pin_groups)
+        if port_channels:
+            configure_port_channels(module, intersight, port_policy, port_channels)
+        if port_roles:
+            configure_port_roles(module, intersight, port_policy, port_roles)
+        if port_modes:
+            configure_port_modes(module, intersight, port_policy, port_modes)
+        # yes now is the time to delete the port policy
+        intersight.configure_policy_or_profile(resource_path=resource_path)
 
     module.exit_json(**intersight.result)
+
+
+def configure_pin_groups(module, intersight, port_policy, pin_groups):
+    for pin_group in pin_groups:
+        interface_role = {}
+        if pin_group['pin_target_interface_type'] == 'Port':
+            port_spec = pin_group['port_spec']
+            interface_role = get_interface_role_from_port_specification(intersight, port_spec, port_policy)
+        elif pin_group['pin_target_interface_type'] == 'PortChannel':
+            port_channel_spec = pin_group['port_channel_spec']
+            interface_role = get_interface_role_from_port_channel_specification(intersight, port_channel_spec, port_policy)
+        process_pin_group_specification(intersight, pin_group['name'], pin_group['type'], interface_role, port_policy)
+
+
+def get_interface_role_from_port_specification(intersight, port_spec, port_policy):
+    if port_spec['port_role'] == 'EthernetUplink':
+        resource_path = '/fabric/UplinkRoles'
+    elif port_spec['port_role'] == 'FcUplink':
+        resource_path = '/fabric/FcUplinkRoles'
+    elif port_spec['port_role'] == 'FcoeUplink':
+        resource_path = '/fabric/FcoeUplinkRoles'
+
+    intersight.result['api_response'] = {}
+    intersight.result['trace_id'] = ''
+
+    # Get the current state of the resource
+    filter_str = "PortId eq " + str(port_spec['port_id']) + " "
+    filter_str += "and AggregatePortId eq " + str(port_spec['aggregate_port_id']) + " "
+    filter_str += "and SlotId eq " + str(port_spec['slot_id']) + " "
+    filter_str += "and PortPolicy.Moid eq '" + port_policy['Moid'] + "'"
+
+    intersight.get_resource(
+        resource_path=resource_path,
+        query_params={
+            '$filter': filter_str,
+        }
+    )
+    moid = ''
+    object_type = ''
+    if intersight.result['api_response'].get('Moid'):
+        # resource exists and moid was returned
+        moid = intersight.result['api_response']['Moid']
+        object_type = intersight.result['api_response']['ObjectType']
+
+    return {"Moid": moid, "ObjectType": object_type}
+
+
+def get_interface_role_from_port_channel_specification(intersight, port_channel_spec, port_policy):
+    if port_channel_spec['pc_role'] == 'EthernetUplink':
+        resource_path = '/fabric/UplinkPcRoles'
+    elif port_channel_spec['pc_role'] == 'FcUplink':
+        resource_path = '/fabric/FcUplinkPcRoles'
+    elif port_channel_spec['pc_role'] == 'FcoeUplink':
+        resource_path = '/fabric/FcoeUplinkPcRoles'
+
+    intersight.result['api_response'] = {}
+    intersight.result['trace_id'] = ''
+
+    # Get the current state of the resource
+    filter_str = "PcId eq " + str(port_channel_spec['pc_id']) + " "
+    filter_str += "and PortPolicy.Moid eq '" + port_policy['Moid'] + "'"
+    intersight.get_resource(
+        resource_path=resource_path,
+        query_params={
+            '$filter': filter_str,
+        }
+    )
+    moid = ''
+    object_type = ''
+    if intersight.result['api_response'].get('Moid'):
+        # resource exists and moid was returned
+        moid = intersight.result['api_response']['Moid']
+        object_type = intersight.result['api_response']['ObjectType']
+
+    return {"Moid": moid, "ObjectType": object_type}
+
+
+def process_pin_group_specification(intersight, name, type, interface_role, port_policy):
+    resource_path = ''
+    if type == 'LAN':
+        resource_path = '/fabric/LanPinGroups'
+    elif type == 'SAN':
+        resource_path = '/fabric/SanPinGroups'
+
+    intersight.result['api_response'] = {}
+    intersight.result['trace_id'] = ''
+    intersight.api_body = {
+        'Name': name
+    }
+    check_and_add_prop_policy('PinTargetInterfaceRole', 'PinTargetInterfaceRole', interface_role, intersight.api_body)
+    check_and_add_prop_policy('PortPolicy', 'PortPolicy', port_policy, intersight.api_body)
+    intersight.result['api_response'] = {}
+    intersight.result['trace_id'] = ''
+
+    # Get the current state of the resource
+    filter_str = "Name eq '" + name + "' "
+    filter_str += "and PortPolicy.Moid eq '" + port_policy['Moid'] + "'"
+    intersight.get_resource(
+        resource_path=resource_path,
+        query_params={
+            '$filter': filter_str,
+        }
+    )
+    check_and_add_resource(intersight, resource_path)
+
+
 def configure_port_channels(module, intersight, port_policy, port_channels):
     for port_channel in port_channels:
         port_id_start = port_channel['port_id_start']
@@ -830,54 +1036,99 @@ def configure_port_channels(module, intersight, port_policy, port_channels):
             module.fail_json(msg="Port Id Start should be less than Port Id End")
 
         if port_channel['port_channel_role_type'] == 'Appliance':
-            eth_network_control_policy = get_policy_ref(intersight, port_channel['appliance_pc_spec']['eth_network_control_policy'], '/fabric/EthNetworkControlPolicies')
+            eth_network_control_policy = get_policy_ref(intersight,
+                                                        port_channel['appliance_pc_spec']['eth_network_control_policy'],
+                                                        '/fabric/EthNetworkControlPolicies')
             if not eth_network_control_policy['Moid']:
                 # policy does not exist
                 module.fail_json(**intersight.result, msg="Eth Network Control Policy not found")
-      
-            eth_network_group_policy = get_policy_ref(intersight, port_channel['appliance_pc_spec']['eth_network_group_policy'], '/fabric/EthNetworkGroupPolicies')
+            eth_network_group_policy = get_policy_ref(intersight,
+                                                      port_channel['appliance_pc_spec']['eth_network_group_policy'],
+                                                      '/fabric/EthNetworkGroupPolicies')
             if not eth_network_group_policy['Moid']:
                 # policy does not exist
                 module.fail_json(**intersight.result, msg="Eth Network Group Policy not found")
-            
-            link_aggregation_policy = get_policy_ref(intersight, port_channel['appliance_pc_spec']['link_aggregation_policy'], '/fabric/LinkAggregationPolicies')
+            link_aggregation_policy = get_policy_ref(intersight,
+                                                     port_channel['appliance_pc_spec']['link_aggregation_policy'],
+                                                     '/fabric/LinkAggregationPolicies')
             if not link_aggregation_policy['Moid']:
                 # policy does not exist
                 module.fail_json(**intersight.result, msg="Link Aggregation Policy not found")
-            process_appliance_pc_specification(intersight, port_id_start, port_id_end, port_channel, port_policy, eth_network_control_policy, eth_network_group_policy, link_aggregation_policy)
+            process_appliance_pc_specification(intersight, port_id_start, port_id_end, port_channel, port_policy, eth_network_control_policy,
+                                               eth_network_group_policy, link_aggregation_policy)
         elif port_channel['port_channel_role_type'] == 'FcUplink':
             process_fc_pc_specification(intersight, port_id_start, port_id_end, port_channel, port_policy)
         elif port_channel['port_channel_role_type'] == 'FcoeUplink':
-            link_control_policy = get_policy_ref(intersight, port_channel['fcoe_uplink_pc_spec']['link_control_policy'], '/fabric/LinkControlPolicies')
-            if not link_control_policy['Moid']:
-                # policy does not exist
-                module.fail_json(**intersight.result, msg="Link Control Policy not found")  
-            link_aggregation_policy = get_policy_ref(intersight, port_channel['fcoe_uplink_pc_spec']['link_aggregation_policy'], '/fabric/LinkAggregationPolicies')
-            if not link_aggregation_policy['Moid']:
-                # policy does not exist
-                module.fail_json(**intersight.result, msg="Link Aggregation Policy not found")
-
-            process_fcoe_uplink_pc_specification(intersight, port_id_start, port_id_end, port_channel, port_policy, link_control_policy, link_aggregation_policy)
-        elif port_channel['port_channel_role_type'] == 'EthernetUplink':
-            eth_network_group_policy = get_policy_ref(intersight, port_channel['eth_uplink_pc_spec']['eth_network_group_policy'], '/fabric/EthNetworkGroupPolicies')
-            if not eth_network_group_policy['Moid']:
-                # policy does not exist
-                module.fail_json(**intersight.result, msg="Eth Network Group Policy not found")
-            flow_control_policy = get_policy_ref(intersight, port_channel['eth_uplink_pc_spec']['flow_control_policy'], '/fabric/FlowControlPolicies')
-            if not flow_control_policy['Moid']:
-                # policy does not exist
-                module.fail_json(**intersight.result, msg="Flow Control Policy not found")
-            link_aggregation_policy = get_policy_ref(intersight, port_channel['eth_uplink_pc_spec']['link_aggregation_policy'], '/fabric/LinkAggregationPolicies')
-            if not link_aggregation_policy['Moid']:
-                # policy does not exist
-                module.fail_json(**intersight.result, msg="Link Aggregation Policy not found")  
-            link_control_policy = get_policy_ref(intersight, port_channel['eth_uplink_pc_spec']['link_control_policy'], '/fabric/LinkControlPolicies')
+            link_control_policy = get_policy_ref(
+                intersight,
+                port_channel['fcoe_uplink_pc_spec']['link_control_policy'],
+                '/fabric/LinkControlPolicies'
+            )
             if not link_control_policy['Moid']:
                 # policy does not exist
                 module.fail_json(**intersight.result, msg="Link Control Policy not found")
-            process_eth_uplink_pc_specification(intersight, port_id_start, port_id_end, port_channel, port_policy, eth_network_group_policy, flow_control_policy, link_aggregation_policy, link_control_policy)
+            link_aggregation_policy = get_policy_ref(
+                intersight,
+                port_channel['fcoe_uplink_pc_spec']['link_aggregation_policy'],
+                '/fabric/LinkAggregationPolicies'
+            )
+            if not link_aggregation_policy['Moid']:
+                # policy does not exist
+                module.fail_json(**intersight.result, msg="Link Aggregation Policy not found")
+            process_fcoe_uplink_pc_specification(intersight,
+                                                 port_id_start,
+                                                 port_id_end,
+                                                 port_channel,
+                                                 port_policy,
+                                                 link_control_policy,
+                                                 link_aggregation_policy)
+        elif port_channel['port_channel_role_type'] == 'EthernetUplink':
+            eth_network_group_policy = get_policy_ref(
+                intersight,
+                port_channel['eth_uplink_pc_spec']['eth_network_group_policy'],
+                '/fabric/EthNetworkGroupPolicies'
+            )
+            if not eth_network_group_policy['Moid']:
+                # policy does not exist
+                module.fail_json(**intersight.result, msg="Eth Network Group Policy not found")
+            flow_control_policy = get_policy_ref(
+                intersight,
+                port_channel['eth_uplink_pc_spec']['flow_control_policy'],
+                '/fabric/FlowControlPolicies'
+            )
+            if not flow_control_policy['Moid']:
+                # policy does not exist
+                module.fail_json(**intersight.result, msg="Flow Control Policy not found")
+            link_aggregation_policy = get_policy_ref(
+                intersight,
+                port_channel['eth_uplink_pc_spec']['link_aggregation_policy'],
+                '/fabric/LinkAggregationPolicies'
+            )
+            if not link_aggregation_policy['Moid']:
+                # policy does not exist
+                module.fail_json(**intersight.result, msg="Link Aggregation Policy not found")
+            link_control_policy = get_policy_ref(
+                intersight,
+                port_channel['eth_uplink_pc_spec']['link_control_policy'],
+                '/fabric/LinkControlPolicies'
+            )
+            if not link_control_policy['Moid']:
+                # policy does not exist
+                module.fail_json(**intersight.result, msg="Link Control Policy not found")
+            process_eth_uplink_pc_specification(
+                intersight,
+                port_id_start, port_id_end,
+                port_channel, port_policy,
+                eth_network_group_policy, flow_control_policy,
+                link_aggregation_policy, link_control_policy
+            )
 
-def process_eth_uplink_pc_specification(intersight, port_id_start, port_id_end, port_channel, port_policy, eth_network_group_policy, flow_control_policy, link_aggregation_policy, link_control_policy):
+
+def process_eth_uplink_pc_specification(intersight,
+                                        port_id_start, port_id_end,
+                                        port_channel, port_policy,
+                                        eth_network_group_policy, flow_control_policy,
+                                        link_aggregation_policy, link_control_policy):
     resource_path = '/fabric/UplinkPcRoles'
     eth_uplink_pc_spec = port_channel['eth_uplink_pc_spec']
     intersight.result['api_response'] = {}
@@ -892,8 +1143,9 @@ def process_eth_uplink_pc_specification(intersight, port_id_start, port_id_end, 
     check_and_add_prop_policy_toarray('EthNetworkGroupPolicy', 'eth_network_group_policy', eth_network_group_policy, intersight.api_body)
     check_and_add_prop_policy('LinkAggregationPolicy', 'link_aggregation_policy', link_aggregation_policy, intersight.api_body)
     check_and_add_prop_policy('LinkControlPolicy', 'link_control_policy', link_control_policy, intersight.api_body)
-    check_and_add_ports(intersight, port_id_start, port_id_end, port_channel['slot_id'], port_channel['aggregate_port_id'])  
+    check_and_add_ports(intersight, port_id_start, port_id_end, port_channel['slot_id'], port_channel['aggregate_port_id'])
     check_and_add_prop_policy('PortPolicy', 'port_policy', port_policy, intersight.api_body)
+
     # Get the current state of the resource
     filter_str = "PcId eq " + str(port_channel['pc_id']) + " "
     filter_str += "and PortPolicy.Moid eq '" + port_policy['Moid'] + "'"
@@ -904,10 +1156,13 @@ def process_eth_uplink_pc_specification(intersight, port_id_start, port_id_end, 
             '$filter': filter_str,
         }
     )
-
     check_and_add_resource(intersight, resource_path)
 
-def process_fcoe_uplink_pc_specification(intersight, port_id_start, port_id_end, port_channel, port_policy, link_control_policy, link_aggregation_policy):
+
+def process_fcoe_uplink_pc_specification(intersight,
+                                         port_id_start, port_id_end,
+                                         port_channel, port_policy,
+                                         link_control_policy, link_aggregation_policy):
     resource_path = '/fabric/FcoeUplinkPcRoles'
     fcoe_uplink_pc_spec = port_channel['fcoe_uplink_pc_spec']
     intersight.result['api_response'] = {}
@@ -920,8 +1175,9 @@ def process_fcoe_uplink_pc_specification(intersight, port_id_start, port_id_end,
     check_and_add_prop('AdminSpeed', 'admin_speed', fcoe_uplink_pc_spec, intersight.api_body)
     check_and_add_prop_policy('LinkControlPolicy', 'link_control_policy', link_control_policy, intersight.api_body)
     check_and_add_prop_policy('LinkAggregationPolicy', 'link_aggregation_policy', link_aggregation_policy, intersight.api_body)
-    check_and_add_ports(intersight, port_id_start, port_id_end, port_channel['slot_id'], port_channel['aggregate_port_id'])  
+    check_and_add_ports(intersight, port_id_start, port_id_end, port_channel['slot_id'], port_channel['aggregate_port_id'])
     check_and_add_prop_policy('PortPolicy', 'port_policy', port_policy, intersight.api_body)
+
     # Get the current state of the resource
     filter_str = "PcId eq " + str(port_channel['pc_id']) + " "
     filter_str += "and PortPolicy.Moid eq '" + port_policy['Moid'] + "'"
@@ -933,6 +1189,7 @@ def process_fcoe_uplink_pc_specification(intersight, port_id_start, port_id_end,
         }
     )
     check_and_add_resource(intersight, resource_path)
+
 
 def process_fc_pc_specification(intersight, port_id_start, port_id_end, port_channel, port_policy):
     resource_path = '/fabric/FcUplinkPcRoles'
@@ -946,9 +1203,10 @@ def process_fc_pc_specification(intersight, port_id_start, port_id_end, port_cha
     check_and_add_prop("PcId", "pc_id", port_channel, intersight.api_body)
     check_and_add_prop('AdminSpeed', 'admin_speed', fc_uplink_pc_spec, intersight.api_body)
     check_and_add_prop('VsanId', 'vsan_id', fc_uplink_pc_spec, intersight.api_body)
-    check_and_add_ports(intersight, port_id_start, port_id_end, port_channel['slot_id'], port_channel['aggregate_port_id'])  
+    check_and_add_ports(intersight, port_id_start, port_id_end, port_channel['slot_id'], port_channel['aggregate_port_id'])
     check_and_add_prop_policy('PortPolicy', 'port_policy', port_policy, intersight.api_body)
-     # Get the current state of the resource
+
+    # Get the current state of the resource
     filter_str = "PcId eq " + str(port_channel['pc_id']) + " "
     filter_str += "and PortPolicy.Moid eq '" + port_policy['Moid'] + "'"
 
@@ -960,7 +1218,12 @@ def process_fc_pc_specification(intersight, port_id_start, port_id_end, port_cha
     )
     check_and_add_resource(intersight, resource_path)
 
-def process_appliance_pc_specification(intersight, port_id_start, port_id_end, port_channel, port_policy, eth_network_control_policy, eth_network_group_policy, link_aggregation_policy ):
+
+def process_appliance_pc_specification(intersight,
+                                       port_id_start, port_id_end,
+                                       port_channel, port_policy,
+                                       eth_network_control_policy, eth_network_group_policy,
+                                       link_aggregation_policy):
     resource_path = '/fabric/AppliancePcRoles'
     appliance_pc_spec = port_channel['appliance_pc_spec']
     intersight.result['api_response'] = {}
@@ -977,8 +1240,8 @@ def process_appliance_pc_specification(intersight, port_id_start, port_id_end, p
     check_and_add_prop_policy('EthNetworkGroupPolicy', 'eth_network_group_policy', eth_network_group_policy, intersight.api_body)
     check_and_add_prop_policy('LinkAggregationPolicy', 'link_aggregation_policy', link_aggregation_policy, intersight.api_body)
     check_and_add_prop_policy('PortPolicy', 'port_policy', port_policy, intersight.api_body)
-    check_and_add_ports(intersight, port_id_start, port_id_end, port_channel['slot_id'], port_channel['aggregate_port_id'])  
-     # Get the current state of the resource
+    check_and_add_ports(intersight, port_id_start, port_id_end, port_channel['slot_id'], port_channel['aggregate_port_id'])
+    # Get the current state of the resource
     filter_str = "PcId eq " + str(port_channel['pc_id']) + " "
     filter_str += "and PortPolicy.Moid eq '" + port_policy['Moid'] + "'"
 
@@ -990,6 +1253,7 @@ def process_appliance_pc_specification(intersight, port_id_start, port_id_end, p
     )
     check_and_add_resource(intersight, resource_path)
 
+
 def check_and_add_ports(intersight, port_id_start, port_id_end, slot_id, aggregate_port_id):
     intersight.api_body['Ports'] = []
     for port_id in range(port_id_start, port_id_end + 1):
@@ -999,12 +1263,13 @@ def check_and_add_ports(intersight, port_id_start, port_id_end, slot_id, aggrega
             'AggregatePortId': aggregate_port_id
         })
 
+
 def configure_port_modes(module, intersight, port_policy, port_modes):
-    resource_path='/fabric/PortModes'
+    resource_path = '/fabric/PortModes'
     for port_mode in port_modes:
         intersight.result['api_response'] = {}
         intersight.result['trace_id'] = ''
-        
+
         intersight.api_body = {
             'Tags': intersight.module.params['tags'],
         }
@@ -1026,7 +1291,8 @@ def configure_port_modes(module, intersight, port_policy, port_modes):
             }
         )
         check_and_add_resource(intersight, resource_path)
-       
+
+
 def configure_port_roles(module, intersight, port_policy, port_roles):
     for port_role in port_roles:
         port_id_start = port_role['port_id_start']
@@ -1034,19 +1300,22 @@ def configure_port_roles(module, intersight, port_policy, port_roles):
 
         if port_id_start > port_id_end:
             module.fail_json(msg="Port Id Start should be less than Port Id End")
-        
+
         for port_id in range(port_id_start, port_id_end + 1):
             if port_role['port_role'] == 'Appliance':
-              eth_network_control_policy = get_policy_ref(intersight, port_role['appliance_spec']['eth_network_control_policy'], '/fabric/EthNetworkControlPolicies')
-              if not eth_network_control_policy['Moid']:
-                  # policy does not exist
-                  module.fail_json(**intersight.result, msg="Eth Network Control Policy not found")
-        
-              eth_network_group_policy = get_policy_ref(intersight, port_role['appliance_spec']['eth_network_group_policy'], '/fabric/EthNetworkGroupPolicies')
-              if not eth_network_group_policy['Moid']:
-                  # policy does not exist
-                  module.fail_json(**intersight.result, msg="Eth Network Group Policy not found")
-              process_appliance_specification(intersight, port_id, port_role, port_policy, eth_network_control_policy, eth_network_group_policy)
+                eth_network_control_policy = get_policy_ref(intersight,
+                                                            port_role['appliance_spec']['eth_network_control_policy'],
+                                                            '/fabric/EthNetworkControlPolicies')
+                if not eth_network_control_policy['Moid']:
+                    # policy does not exist
+                    module.fail_json(**intersight.result, msg="Eth Network Control Policy not found")
+
+                eth_network_group_policy = get_policy_ref(intersight, port_role['appliance_spec']['eth_network_group_policy'],
+                                                          '/fabric/EthNetworkGroupPolicies')
+                if not eth_network_group_policy['Moid']:
+                    # policy does not exist
+                    module.fail_json(**intersight.result, msg="Eth Network Group Policy not found")
+                process_appliance_specification(intersight, port_id, port_role, port_policy, eth_network_control_policy, eth_network_group_policy)
             elif port_role['port_role'] == 'Server':
                 process_server_specification(intersight, port_id, port_role, port_policy)
             elif port_role['port_role'] == 'FcStorage':
@@ -1057,24 +1326,30 @@ def configure_port_roles(module, intersight, port_policy, port_roles):
                 link_control_policy = get_policy_ref(intersight, port_role['fcoe_uplink_spec']['link_control_policy'], '/fabric/LinkControlPolicies')
                 if not link_control_policy['Moid']:
                     # policy does not exist
-                    module.fail_json(**intersight.result, msg="Link Control Policy not found")  
+                    module.fail_json(**intersight.result, msg="Link Control Policy not found")
                 process_fcoe_uplink_specification(intersight, port_id, port_role, port_policy, link_control_policy)
             elif port_role['port_role'] == 'EthernetUplink':
-                eth_network_group_policy = get_policy_ref(intersight, port_role['eth_uplink_spec']['eth_network_group_policy'], '/fabric/EthNetworkGroupPolicies')
+                eth_network_group_policy = get_policy_ref(intersight,
+                                                          port_role['eth_uplink_spec']['eth_network_group_policy'],
+                                                          '/fabric/EthNetworkGroupPolicies')
                 if not eth_network_group_policy['Moid']:
-                  # policy does not exist
-                  module.fail_json(**intersight.result, msg="Eth Network Group Policy not found")
-                flow_control_policy = get_policy_ref(intersight, port_role['eth_uplink_spec']['flow_control_policy'], '/fabric/FlowControlPolicies')  
+                    # policy does not exist
+                    module.fail_json(**intersight.result, msg="Eth Network Group Policy not found")
+                flow_control_policy = get_policy_ref(intersight, port_role['eth_uplink_spec']['flow_control_policy'], '/fabric/FlowControlPolicies')
                 if not flow_control_policy['Moid']:
                     # policy does not exist
                     module.fail_json(**intersight.result, msg="Flow Control Policy not found")
                 link_control_policy = get_policy_ref(intersight, port_role['eth_uplink_spec']['link_control_policy'], '/fabric/LinkControlPolicies')
                 if not link_control_policy['Moid']:
                     # policy does not exist
-                    module.fail_json(**intersight.result, msg="Link Control Policy not found") 
-                process_eth_uplink_specification(intersight, port_id, port_role, port_policy, eth_network_group_policy, flow_control_policy, link_control_policy) 
+                    module.fail_json(**intersight.result, msg="Link Control Policy not found")
+                process_eth_uplink_specification(intersight,
+                                                 port_id, port_role, port_policy,
+                                                 eth_network_group_policy, flow_control_policy,
+                                                 link_control_policy)
 
-def process_eth_uplink_specification(intersight, port_id, port_role, port_policy, eth_network_group_policy, flow_control_policy, link_control_policy):  
+
+def process_eth_uplink_specification(intersight, port_id, port_role, port_policy, eth_network_group_policy, flow_control_policy, link_control_policy):
     resource_path = '/fabric/UplinkRoles'
     eth_uplink_spec = port_role['eth_uplink_spec']
 
@@ -1093,7 +1368,7 @@ def process_eth_uplink_specification(intersight, port_id, port_role, port_policy
         check_and_add_prop_policy_toarray('EthNetworkGroupPolicy', 'eth_network_group_policy', eth_network_group_policy, intersight.api_body)
         check_and_add_prop_policy('FlowControlPolicy', 'flow_control_policy', flow_control_policy, intersight.api_body)
         check_and_add_prop_policy('LinkControlPolicy', 'link_control_policy', link_control_policy, intersight.api_body)
-    
+
     # Get the current state of the resource
     filter_str = "PortId eq " + str(port_id) + " "
     filter_str += "and AggregatePortId eq " + str(port_role['aggregate_port_id']) + " "
@@ -1108,7 +1383,8 @@ def process_eth_uplink_specification(intersight, port_id, port_role, port_policy
     )
     check_and_add_resource(intersight, resource_path)
 
-def process_fcoe_uplink_specification(intersight, port_id, port_role, port_policy, link_control_policy ):
+
+def process_fcoe_uplink_specification(intersight, port_id, port_role, port_policy, link_control_policy):
     resource_path = '/fabric/FcoeUplinkRoles'
     fcoe_uplink_spec = port_role['fcoe_uplink_spec']
 
@@ -1126,7 +1402,7 @@ def process_fcoe_uplink_specification(intersight, port_id, port_role, port_polic
         check_and_add_prop('Fec', 'fec', fcoe_uplink_spec, intersight.api_body)
         check_and_add_prop_policy('LinkControlPolicy', 'link_control_policy', link_control_policy
                                   , intersight.api_body)
-    
+
     # Get the current state of the resource
     filter_str = "PortId eq " + str(port_id) + " "
     filter_str += "and AggregatePortId eq " + str(port_role['aggregate_port_id']) + " "
@@ -1140,6 +1416,7 @@ def process_fcoe_uplink_specification(intersight, port_id, port_role, port_polic
         }
     )
     check_and_add_resource(intersight, resource_path)
+
 
 def process_fc_uplink_or_storage_specification(intersight, port_id, port_role, port_policy, fc_spec, resource_path):
     intersight.result['api_response'] = {}
@@ -1154,7 +1431,7 @@ def process_fc_uplink_or_storage_specification(intersight, port_id, port_role, p
         check_and_add_prop_policy('PortPolicy', 'port_policy', port_policy, intersight.api_body)
         check_and_add_prop('AdminSpeed', 'admin_speed', fc_spec, intersight.api_body)
         check_and_add_prop('VsanId', 'vsan_id', fc_spec, intersight.api_body)
-    
+
     # Get the current state of the resource
     filter_str = "PortId eq " + str(port_id) + " "
     filter_str += "and AggregatePortId eq " + str(port_role['aggregate_port_id']) + " "
@@ -1168,6 +1445,7 @@ def process_fc_uplink_or_storage_specification(intersight, port_id, port_role, p
         }
     )
     check_and_add_resource(intersight, resource_path)
+
 
 def process_server_specification(intersight, port_id, port_role, port_policy):
     resource_path = '/fabric/ServerRoles'
@@ -1185,7 +1463,7 @@ def process_server_specification(intersight, port_id, port_role, port_policy):
         check_and_add_prop('AutoNegotiationDisabled', 'auto_negotiation_disabled', server_spec, intersight.api_body)
         check_and_add_prop('Fec', 'fec', server_spec, intersight.api_body)
         check_and_add_prop_policy('PortPolicy', 'port_policy', port_policy, intersight.api_body)
-    
+
     # Get the current state of the resource
     filter_str = "PortId eq " + str(port_id) + " "
     filter_str += "and AggregatePortId eq " + str(port_role['aggregate_port_id']) + " "
@@ -1199,6 +1477,7 @@ def process_server_specification(intersight, port_id, port_role, port_policy):
         }
     )
     check_and_add_resource(intersight, resource_path)
+
 
 def process_appliance_specification(intersight, port_id, port_role, port_policy, eth_network_control_policy, eth_network_group_policy):
     resource_path = '/fabric/ApplianceRoles'
@@ -1221,7 +1500,7 @@ def process_appliance_specification(intersight, port_id, port_role, port_policy,
         check_and_add_prop('Fec', 'fec', appliance_spec, intersight.api_body)
         check_and_add_prop_policy('EthNetworkControlPolicy', 'eth_network_control_policy', eth_network_control_policy, intersight.api_body)
         check_and_add_prop_policy('EthNetworkGroupPolicy', 'eth_network_group_policy', eth_network_group_policy, intersight.api_body)
-    
+
     # Get the current state of the resource
     filter_str = "PortId eq " + str(port_id) + " "
     filter_str += "and AggregatePortId eq " + str(port_role['aggregate_port_id']) + " "
@@ -1236,6 +1515,7 @@ def process_appliance_specification(intersight, port_id, port_role, port_policy,
     )
     check_and_add_resource(intersight, resource_path)
 
+
 def get_policy_ref(intersight, policy_name, resource_path):
     intersight.result['api_response'] = {}
     intersight.result['trace_id'] = ''
@@ -1248,6 +1528,7 @@ def get_policy_ref(intersight, policy_name, resource_path):
     intersight.result['api_response'] = {}
     intersight.result['trace_id'] = ''
     return {"Moid": moid}
+
 
 def check_and_add_resource(intersight, resource_path):
     res_moid = None
@@ -1263,8 +1544,9 @@ def check_and_add_resource(intersight, resource_path):
         intersight.configure_resource(moid=res_moid, resource_path=resource_path, body=intersight.api_body, query_params=None)
     elif intersight.module.params['state'] == 'absent':
         if res_moid:
-          intersight.delete_resource(moid=res_moid, resource_path=resource_path)
-          res_moid = None
-    
+            intersight.delete_resource(moid=res_moid, resource_path=resource_path)
+            res_moid = None
+
+
 if __name__ == '__main__':
     main()
